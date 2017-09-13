@@ -12,10 +12,11 @@ router.use(bodyParser.urlencoded({ extended: true }));
 router.post('/', function (req, res) {
     if (req.body.customer._id) {
         Customer.findById(req.body.customer._id, function (err, customer) {
-            if (err) return res.status(500).send("Customer not found");
+            if (err) return res.status(500)
+            if (!customer) return res.status(404).send("Customer not found");
             Transaction.create({
                     date_created: Date.now(),
-                    customer: customer
+                    customer: customer._id
                 },
                 function (err, transaction) {
                     if (err) return res.status(500);
@@ -33,7 +34,7 @@ router.post('/', function (req, res) {
         function (err, customer) {
             Transaction.create({
                 date_created: Date.now(),
-                customer: customer
+                customer: customer._id
             }, function (err, transaction) {
                 if (err) return res.status(500);
                 res.status(200).send(transaction);
@@ -77,6 +78,7 @@ router.delete('/:id', function (req, res) {
         transaction.remove(function (err) {
             if (err) return res.status(500);
         });
+        res.status(200);
     })
 });
 
@@ -90,7 +92,7 @@ router.post('/:id/bikes', function (req, res) {
         if (req.body._id) {
             Bike.findById(req.body._id, function (err, bike) {
                 if (!bike) return res.status(404).send("No bike found");
-                transaction.bikes.push(bike);
+                transaction.bikes.push(bike._id);
                 transaction.save();
             });
             res.status(200).send(transaction);
@@ -102,7 +104,7 @@ router.post('/:id/bikes', function (req, res) {
             },
             function (err, bike) {
                 if (err) return res.status(500);
-                transaction.bikes.push(bike);
+                transaction.bikes.push(bike._id);
                 transaction.save();
                 res.status(200).send(transaction);
             })
@@ -120,7 +122,7 @@ router.post('/:id/items', function (req, res) {
         Item.findByID(req.body._id, function (err, item) {
             if (err) return res.status(500);
             if (!item) return res.status(404);
-            transaction.items.push(item);
+            transaction.items.push(item._id);
             transaction.save();
             res.status(200).send(transaction);
         })
@@ -134,7 +136,9 @@ router.delete('/:id/items/:item_id', function (req, res) {
     Transaction.findByID(req.params.id, function (err, transaction) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
-        transaction.items.splice(find(function (e) { e._id = item_id }), 1);
+        transaction.items.splice(find(function (i) { return i = item_id }), 1);
+        transaction.save();
+        res.status(200).send(transaction);
     })
 });
 
@@ -163,18 +167,22 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
         transaction.repairs.splice(find(function (e) { e._id = repair_id }), 1);
+        transaction.save();
+        res.status(200).send(transaction);
     })
 });
 
 /*
-Searches for transactions - "GET /transactions/search?q"
+Searches for transactions by customer  - "GET /transactions/search?q="
  */
 router.get('/search', function (req, res) {
-    Transaction.find({$text: {$search: req.query.q}}, function (err, transactions) {
-        if (err) return res.status(500);
-        res.status(200).send(transactions);
-    });
-
+    Transaction.find().populate({path: 'customer'}).exec(function (err, transactions) {
+        transactions.filter(function (transaction) {
+            return transaction.customer.first_name.includes(req.query.q)
+            || transaction.customer.last_name.includes(req.query.q)
+            || transaction.customer.email.includes(req.query.q);
+        })
+    })
 });
 
 module.exports = router;
