@@ -4,11 +4,12 @@ var bodyParser = require('body-parser');
 var Transaction = require('./../models/Transaction');
 var Customer = require('./../models/Customer');
 var Bike = require('./../models/Bike');
+var Item = require('./../models/Item');
+var Repair = require('./../models/Repair');
 
 router.use(bodyParser.urlencoded({ extended: true }));
 
 router.post('/', function (req, res) {
-    console.log(req.body);
     if (req.body.customer._id) {
         Customer.findById(req.body.customer._id, function (err, customer) {
             if (err) return res.status(500).send("Customer not found");
@@ -106,6 +107,62 @@ router.post('/:id/bikes', function (req, res) {
                 res.status(200).send(transaction);
             })
         }
+    })
+});
+
+/*
+Adds an existing item to the transaction - "POST /transactions/items"
+ */
+router.post('/:id/items', function (req, res) {
+    Transaction.findByID(req.params.id, function (err, transaction) {
+        if (err) return res.status(500);
+        if (!transaction) return res.status(404);
+        Item.findByID(req.body._id, function (err, item) {
+            if (err) return res.status(500);
+            if (!item) return res.status(404);
+            transaction.items.push(item);
+            transaction.save();
+            res.status(200).send(transaction);
+        })
+    })
+});
+
+/*
+Deletes the item with specified ID from the transaction.
+ */
+router.delete('/:id/items/:item_id', function (req, res) {
+    Transaction.findByID(req.params.id, function (err, transaction) {
+        if (err) return res.status(500);
+        if (!transaction) return res.status(404);
+        transaction.items.splice(find(function (e) { e._id = item_id }), 1);
+    })
+});
+
+/*
+ Adds an existing repair to the transaction - "POST /transactions/repairs"
+ */
+router.post('/:id/repairs', function (req, res) {
+    Transaction.findByID(req.params.id, function (err, transaction) {
+        if (err) return res.status(500);
+        if (!transaction) return res.status(404);
+        Repair.findByID(req.body._id, function (err, repair) {
+            if (err) return res.status(500);
+            if (!repair) return res.status(404);
+            transaction.repairs.push(repair);
+            transaction.save();
+            res.status(200).send(transaction);
+        })
+    })
+});
+
+/*
+ Deletes the repair with specified ID from the transaction.
+ */
+router.delete('/:id/repairs/:repair_id', function (req, res) {
+    Transaction.findByID(req.params.id, function (err, transaction) {
+        if (err) return res.status(500);
+        if (!transaction) return res.status(404);
+        transaction.repairs.splice(find(function (e) { e._id = repair_id }), 1);
     })
 });
 
