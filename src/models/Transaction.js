@@ -11,6 +11,7 @@ var TransactionSchema = new mongoose.Schema({
 
 var autoPopulateCustomer = function (next) {
     this.populate('customer');
+    this.populate('bike');
     next();
 };
 

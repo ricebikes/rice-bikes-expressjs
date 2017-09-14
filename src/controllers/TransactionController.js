@@ -7,7 +7,8 @@ var Bike = require('./../models/Bike');
 var Item = require('./../models/Item');
 var Repair = require('./../models/Repair');
 
-router.use(bodyParser.urlencoded({ extended: true }));
+// router.use(bodyParser.urlencoded({ extended: true }));
+router.use(bodyParser.json());
 
 /*
 Posts a single transaction - "POST /transactions"
@@ -79,9 +80,23 @@ router.get('/search', function (req, res) {
     Transaction.find({}).exec(function (err, transactions) {
         if (err) return res.status(500);
         transactions = transactions.filter( function(el) {
-            return search(el.customer.first_name, req.query.q)
-            || search(el.customer.last_name, req.query.q)
-            || search(el.customer.email, req.query.q);
+            console.log(el);
+            if (req.query.customer) {
+                return search(el.customer.first_name, req.query.customer)
+                    || search(el.customer.last_name, req.query.customer)
+                    || search(el.customer.email, req.query.customer);
+            } else if (req.query.bike) {
+                for (var i = 0; i < el.bikes.length; i++) {
+                    console.log(el.bikes[i]);
+                    if (search(el.bikes[i].make, req.query.bike)
+                        || search(el.bikes[i].model, req.query.bike)
+                        || search(el.bikes[i].description, req.query.bike)) {
+                        return true;
+                    }
+                }
+            } else if (req.query.description) {
+                return search(el.description, req.query.description);
+            }
         });
         res.status(200).send(transactions);
     })
