@@ -61,21 +61,33 @@ router.get('/', function (req, res) {
     });
 });
 
+
+/**
+ * Search helper. Searches in string for given string.
+ * @param str - to be searched
+ * @param query - string to look for
+ * @returns {boolean}
+ */
+var search = function search(str, query) {
+    return str.toLowerCase().indexOf(query.toLowerCase()) > -1;
+};
+
 /*
  Searches for transactions by customer  - "GET /transactions/search?q="
  */
 router.get('/search', function (req, res) {
     Transaction.find({}).exec(function (err, transactions) {
         if (err) return res.status(500);
-        console.log(transactions);
-        transactions.filter(function (transaction) {
-            return transaction.customer.first_name.includes(req.query.q)
-                || transaction.customer.last_name.includes(req.query.q)
-                || transaction.customer.email.includes(req.query.q);
+        transactions = transactions.filter( function(el) {
+            return search(el.customer.first_name, req.query.q)
+            || search(el.customer.last_name, req.query.q)
+            || search(el.customer.email, req.query.q);
         });
         res.status(200).send(transactions);
     })
 });
+
+
 
 /*
 Gets a single transaction - "GET /transactions/:id"
