@@ -7,8 +7,8 @@ var Bike = require('./../models/Bike');
 var Item = require('./../models/Item');
 var Repair = require('./../models/Repair');
 
-// router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json());
+
 
 /*
 Posts a single transaction - "POST /transactions"
@@ -51,6 +51,7 @@ router.post('/', function (req, res) {
     }
 });
 
+
 /*
  Gets all transactions - "GET /transactions"
  */
@@ -73,8 +74,9 @@ var search = function search(str, query) {
     return str.toLowerCase().indexOf(query.toLowerCase()) > -1;
 };
 
+
 /*
- Searches for transactions by customer  - "GET /transactions/search?q="
+ Searches for transactions by customer XOR bike XOR transaction description - "GET /transactions/search?customer="
  */
 router.get('/search', function (req, res) {
     Transaction.find({}).exec(function (err, transactions) {
@@ -103,7 +105,6 @@ router.get('/search', function (req, res) {
 });
 
 
-
 /*
 Gets a single transaction - "GET /transactions/:id"
  */
@@ -114,6 +115,7 @@ router.get('/:id', function (req, res) {
         res.status(200).send(transaction);
     });
 });
+
 
 /*
 Deletes a single transaction - "DELETE /transactions/:id"
@@ -128,6 +130,7 @@ router.delete('/:id', function (req, res) {
         res.status(200).send("OK");
     })
 });
+
 
 /*
 Posts a bike to a transaction - "POST /transactions/:id/bikes"
@@ -160,6 +163,7 @@ router.post('/:id/bikes', function (req, res) {
     });
 });
 
+
 /*
 Deletes a bike from the transaction - "DELETE /transactions/:id/bikes/:bike_id"
  */
@@ -173,6 +177,7 @@ router.delete('/:id/bikes/:bike_id', function (req, res) {
         });
     })
 });
+
 
 /*
 Adds an existing item to the transaction - "POST /transactions/items"
@@ -192,6 +197,7 @@ router.post('/:id/items', function (req, res) {
     })
 });
 
+
 /*
 Deletes the item with specified ID from the transaction.
  */
@@ -205,6 +211,7 @@ router.delete('/:id/items/:item_id', function (req, res) {
         });
     })
 });
+
 
 /*
  Adds an existing repair to the transaction - "POST /transactions/repairs"
@@ -224,6 +231,7 @@ router.post('/:id/repairs', function (req, res) {
     })
 });
 
+
 /*
  Deletes the repair with specified ID from the transaction.
  */
@@ -237,7 +245,6 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
         });
     })
 });
-
 
 
 module.exports = router;
