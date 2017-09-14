@@ -125,7 +125,7 @@ router.delete('/:id', function (req, res) {
         transaction.remove(function (err) {
             if (err) return res.status(500);
         });
-        res.status(200);
+        res.status(200).send("OK");
     })
 });
 
@@ -152,8 +152,9 @@ router.post('/:id/bikes', function (req, res) {
             function (err, bike) {
                 if (err) return res.status(500);
                 transaction.bikes.push(bike._id);
-                transaction.save();
-                res.status(200).send(transaction);
+                transaction.save(function (err, transaction) {
+                    res.status(200).send(transaction);
+                });
             });
         }
     });
@@ -167,8 +168,9 @@ router.delete('/:id/bikes/:bike_id', function (req, res) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
         transaction.bikes.splice(transaction.bikes.find(function (b) { return b = req.params.bike_id}), 1);
-        transaction.save();
-        res.status(200).send(transaction);
+        transaction.save(function (err, transaction) {
+            res.status(200).send(transaction);
+        });
     })
 });
 
@@ -183,8 +185,9 @@ router.post('/:id/items', function (req, res) {
             if (err) return res.status(500);
             if (!item) return res.status(404);
             transaction.items.push(item._id);
-            transaction.save();
-            res.status(200).send(transaction);
+            transaction.save(function (err, transaction) {
+                res.status(200).send(transaction);
+            });
         })
     })
 });
@@ -197,8 +200,9 @@ router.delete('/:id/items/:item_id', function (req, res) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
         transaction.items.splice(find(function (i) { return i = req.params.item_id }), 1);
-        transaction.save();
-        res.status(200).send(transaction);
+        transaction.save(function (err, transaction) {
+            res.status(200).send(transaction);
+        });
     })
 });
 
@@ -213,8 +217,9 @@ router.post('/:id/repairs', function (req, res) {
             if (err) return res.status(500);
             if (!repair) return res.status(404);
             transaction.repairs.push(repair);
-            transaction.save();
-            res.status(200).send(transaction);
+            transaction.save(function (err, transaction) {
+                res.status(200).send(transaction);
+            });
         })
     })
 });
@@ -227,8 +232,9 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
         transaction.repairs.splice(find(function (e) { e._id = req.params.repair_id }), 1);
-        transaction.save();
-        res.status(200).send(transaction);
+        transaction.save(function (err, transaction) {
+            res.status(200).send(transaction);
+        });
     })
 });
 
