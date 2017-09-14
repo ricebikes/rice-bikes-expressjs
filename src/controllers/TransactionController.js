@@ -9,10 +9,13 @@ var Repair = require('./../models/Repair');
 
 router.use(bodyParser.urlencoded({ extended: true }));
 
+/*
+Posts a single transaction - "POST /transactions"
+ */
 router.post('/', function (req, res) {
-    if (req.body.customer._id) {
-        Customer.findById(req.body.customer._id, function (err, customer) {
-            if (err) return res.status(500)
+    if (req.body.hasOwnProperty("_id")) {
+        Customer.findById(req.body._id, function (err, customer) {
+            if (err) return res.status(500);
             if (!customer) return res.status(404).send("Customer not found");
             Transaction.create({
                     date_created: Date.now(),
@@ -25,11 +28,11 @@ router.post('/', function (req, res) {
             );
         });
 
-    } else if (req.body.customer && !req.body.customer._id) {
+    } else {
         Customer.create({
-            first_name: req.body.customer.first_name,
-            last_name: req.body.customer.last_name,
-            email: req.body.customer.email
+            first_name: req.body.first_name,
+            last_name: req.body.last_name,
+            email: req.body.email
         },
         function (err, customer) {
             Transaction.create({
@@ -40,9 +43,6 @@ router.post('/', function (req, res) {
                 res.status(200).send(transaction);
             })
         });
-
-    } else {
-        res.status(400).send("No customer specified for transaction.")
     }
 });
 
@@ -58,11 +58,27 @@ router.get('/', function (req, res) {
 });
 
 /*
+ Searches for transactions by customer  - "GET /transactions/search?q="
+ */
+router.get('/search', function (req, res) {
+    Transaction.find({}).populate('customer').exec(function (err, transactions) {
+        if (err) return res.status(500);
+        console.log(transactions);
+        transactions.filter(function (transaction) {
+            return transaction.customer.first_name.includes(req.query.q)
+                || transaction.customer.last_name.includes(req.query.q)
+                || transaction.customer.email.includes(req.query.q);
+        });
+        res.status(200).send(transactions);
+    })
+});
+
+/*
 Gets a single transaction - "GET /transactions/:id"
  */
 router.get('/:id', function (req, res) {
     Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500).send("There was a problem finding the transaction.");
+        if (err) return res.status(500).send(err);
         if (!transaction) return res.status(404).send("No transaction found.");
         res.status(200).send(transaction);
     });
@@ -86,7 +102,7 @@ router.delete('/:id', function (req, res) {
 Posts a bike to a transaction - "POST /transactions/:id/bikes"
  */
 router.post('/:id/bikes', function (req, res) {
-    Transaction.findByID(req.params.id, function (err, transaction) {
+    Transaction.findById(req.params.id, function (err, transaction) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
         if (req.body._id) {
@@ -96,19 +112,32 @@ router.post('/:id/bikes', function (req, res) {
                 transaction.save();
             });
             res.status(200).send(transaction);
-        } else if (req.body) {
+        } else {
             Bike.create({
-                make: req.body.bike.make,
-                model: req.body.bike.model,
-                description: req.body.bike.description
+                make: req.body.make,
+                model: req.body.model,
+                description: req.body.description
             },
             function (err, bike) {
                 if (err) return res.status(500);
                 transaction.bikes.push(bike._id);
                 transaction.save();
                 res.status(200).send(transaction);
-            })
+            });
         }
+    });
+});
+
+/*
+Deletes a bike from the transaction - "DELETE /transactions/:id/bikes/:bike_id"
+ */
+router.delete('/:id/bikes/:bike_id', function (req, res) {
+    Transaction.findById(req.params.id, function (err, transaction) {
+        if (err) return res.status(500);
+        if (!transaction) return res.status(404);
+        transaction.bikes.splice(transaction.bikes.find(function (b) { return b = req.params.bike_id}), 1);
+        transaction.save();
+        res.status(200).send(transaction);
     })
 });
 
@@ -116,10 +145,10 @@ router.post('/:id/bikes', function (req, res) {
 Adds an existing item to the transaction - "POST /transactions/items"
  */
 router.post('/:id/items', function (req, res) {
-    Transaction.findByID(req.params.id, function (err, transaction) {
+    Transaction.findById(req.params.id, function (err, transaction) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
-        Item.findByID(req.body._id, function (err, item) {
+        Item.findById(req.body._id, function (err, item) {
             if (err) return res.status(500);
             if (!item) return res.status(404);
             transaction.items.push(item._id);
@@ -133,10 +162,10 @@ router.post('/:id/items', function (req, res) {
 Deletes the item with specified ID from the transaction.
  */
 router.delete('/:id/items/:item_id', function (req, res) {
-    Transaction.findByID(req.params.id, function (err, transaction) {
+    Transaction.findById(req.params.id, function (err, transaction) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
-        transaction.items.splice(find(function (i) { return i = item_id }), 1);
+        transaction.items.splice(find(function (i) { return i = req.params.item_id }), 1);
         transaction.save();
         res.status(200).send(transaction);
     })
@@ -146,10 +175,10 @@ router.delete('/:id/items/:item_id', function (req, res) {
  Adds an existing repair to the transaction - "POST /transactions/repairs"
  */
 router.post('/:id/repairs', function (req, res) {
-    Transaction.findByID(req.params.id, function (err, transaction) {
+    Transaction.findById(req.params.id, function (err, transaction) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
-        Repair.findByID(req.body._id, function (err, repair) {
+        Repair.findById(req.body._id, function (err, repair) {
             if (err) return res.status(500);
             if (!repair) return res.status(404);
             transaction.repairs.push(repair);
@@ -163,26 +192,15 @@ router.post('/:id/repairs', function (req, res) {
  Deletes the repair with specified ID from the transaction.
  */
 router.delete('/:id/repairs/:repair_id', function (req, res) {
-    Transaction.findByID(req.params.id, function (err, transaction) {
+    Transaction.findById(req.params.id, function (err, transaction) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
-        transaction.repairs.splice(find(function (e) { e._id = repair_id }), 1);
+        transaction.repairs.splice(find(function (e) { e._id = req.params.repair_id }), 1);
         transaction.save();
         res.status(200).send(transaction);
     })
 });
 
-/*
-Searches for transactions by customer  - "GET /transactions/search?q="
- */
-router.get('/search', function (req, res) {
-    Transaction.find().populate({path: 'customer'}).exec(function (err, transactions) {
-        transactions.filter(function (transaction) {
-            return transaction.customer.first_name.includes(req.query.q)
-            || transaction.customer.last_name.includes(req.query.q)
-            || transaction.customer.email.includes(req.query.q);
-        })
-    })
-});
+
 
 module.exports = router;
