@@ -13,36 +13,40 @@ router.use(bodyParser.urlencoded({ extended: true }));
 Posts a single transaction - "POST /transactions"
  */
 router.post('/', function (req, res) {
-    if (req.body.hasOwnProperty("_id")) {
-        Customer.findById(req.body._id, function (err, customer) {
-            if (err) return res.status(500);
-            if (!customer) return res.status(404).send("Customer not found");
-            Transaction.create({
-                    date_created: Date.now(),
-                    customer: customer._id
-                },
-                function (err, transaction) {
-                    if (err) return res.status(500);
-                    res.status(200).send(transaction);
-                }
-            );
-        });
-
-    } else {
-        Customer.create({
-            first_name: req.body.first_name,
-            last_name: req.body.last_name,
-            email: req.body.email
-        },
-        function (err, customer) {
-            Transaction.create({
-                date_created: Date.now(),
-                customer: customer._id
-            }, function (err, transaction) {
+    if (req.body) {
+        if (req.body._id) {
+            Customer.findById(req.body._id, function (err, customer) {
                 if (err) return res.status(500);
-                res.status(200).send(transaction);
-            })
-        });
+                if (!customer) return res.status(404).send("Customer not found");
+                Transaction.create({
+                        date_created: Date.now(),
+                        customer: customer._id
+                    },
+                    function (err, transaction) {
+                        if (err) return res.status(500);
+                        res.status(200).send(transaction);
+                    }
+                );
+            });
+
+        } else {
+            Customer.create({
+                    first_name: req.body.first_name,
+                    last_name: req.body.last_name,
+                    email: req.body.email
+                },
+                function (err, customer) {
+                    Transaction.create({
+                        date_created: Date.now(),
+                        customer: customer._id
+                    }, function (err, transaction) {
+                        if (err) return res.status(500);
+                        res.status(200).send(transaction);
+                    })
+                });
+        }
+    } else {
+        res.status(400);
     }
 });
 
@@ -61,7 +65,7 @@ router.get('/', function (req, res) {
  Searches for transactions by customer  - "GET /transactions/search?q="
  */
 router.get('/search', function (req, res) {
-    Transaction.find({}).populate('customer').exec(function (err, transactions) {
+    Transaction.find({}).exec(function (err, transactions) {
         if (err) return res.status(500);
         console.log(transactions);
         transactions.filter(function (transaction) {

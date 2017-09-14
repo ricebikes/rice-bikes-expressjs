@@ -9,6 +9,13 @@ var TransactionSchema = new mongoose.Schema({
     items: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item'}]
 });
 
+var autoPopulateCustomer = function (next) {
+    this.populate('customer');
+    next();
+};
+
+TransactionSchema.pre('find', autoPopulateCustomer);
+
 mongoose.model('Transaction', TransactionSchema);
 
 module.exports = mongoose.model('Transaction');
