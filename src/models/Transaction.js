@@ -1,8 +1,12 @@
 var mongoose = require('mongoose');
 var transactionId = require('./TransactionId');
+var autoIncrement = require('mongoose-auto-increment');
+
+var connection = mongoose.createConnection('mongodb://localhost/RiceBikes');
+
+autoIncrement.initialize(connection);
 
 var TransactionSchema = new mongoose.Schema({
-    _id: {type: Number, required: true},
     description: String,
     date_created: Date,
     transaction_type: String,
@@ -12,36 +16,16 @@ var TransactionSchema = new mongoose.Schema({
     items: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item'}]
 });
 
-var nextId = function (next) {
-    var doc = this;
-    transactionId.findAndModify(
-        {
-            query: {
-                _id: 'transactionid'
-            },
-            update: {
-                $inc: {
-                    count: 1
-                }
-            },
-            new: true
-        }, function (err, id) {
-            console.log(id);
-            doc._id = id.count;
-            next();
-        }
-    );
-};
-
 var autoPopulate = function (next) {
     this.populate('customer');
     this.populate('bikes');
     next();
 };
 
+TransactionSchema.plugin(autoIncrement.plugin, 'Transaction');
+
 TransactionSchema.pre('find', autoPopulate);
 TransactionSchema.pre('findOne', autoPopulate);
-TransactionSchema.pre('init', nextId);
 
 mongoose.model('Transaction', TransactionSchema);
 

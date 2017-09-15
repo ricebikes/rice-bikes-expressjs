@@ -73,7 +73,7 @@ router.get('/', function (req, res) {
  * @returns {boolean}
  */
 var search = function search(str, query) {
-    return str.toLowerCase().indexOf(query.toLowerCase()) > -1;
+    return str.toLowerCase().search(query) != -1;
 };
 
 
