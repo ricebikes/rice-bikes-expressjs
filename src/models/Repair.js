@@ -6,6 +6,7 @@ var RepairSchema = new mongoose.Schema({
     price: Number
 });
 
+RepairSchema.index({'$**': 'text'});
 mongoose.model('Repair', RepairSchema);
 
 module.exports = mongoose.model('Repair');

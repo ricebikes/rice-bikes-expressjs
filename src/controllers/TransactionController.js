@@ -14,13 +14,14 @@ router.use(bodyParser.json());
 Posts a single transaction - "POST /transactions"
  */
 router.post('/', function (req, res) {
-    if (req.body) {
-        if (req.body._id) {
-            Customer.findById(req.body._id, function (err, customer) {
+    if (req.body.customer) {
+        if (req.body.customer._id) {
+            Customer.findById(req.body.customer._id, function (err, customer) {
                 if (err) return res.status(500);
                 if (!customer) return res.status(404).send("Customer not found");
                 Transaction.create({
                         date_created: Date.now(),
+                        transaction_type: req.body.transaction_type,
                         customer: customer._id
                     },
                     function (err, transaction) {
@@ -32,13 +33,14 @@ router.post('/', function (req, res) {
 
         } else {
             Customer.create({
-                    first_name: req.body.first_name,
-                    last_name: req.body.last_name,
-                    email: req.body.email
+                    first_name: req.body.customer.first_name,
+                    last_name: req.body.customer.last_name,
+                    email: req.body.customer.email
                 },
                 function (err, customer) {
                     Transaction.create({
                         date_created: Date.now(),
+                        transaction_type: req.body.transaction_type,
                         customer: customer._id
                     }, function (err, transaction) {
                         if (err) return res.status(500);
@@ -47,7 +49,7 @@ router.post('/', function (req, res) {
                 });
         }
     } else {
-        res.status(400);
+        res.status(400).send("No customer specified");
     }
 });
 

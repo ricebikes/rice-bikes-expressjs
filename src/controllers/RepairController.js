@@ -5,7 +5,7 @@ var Repair = require('../models/Repair');
 
 router.use(bodyParser.urlencoded({ extended: true }));
 
-router.get('/', function (req, res) {
+router.get('/search', function (req, res) {
     Repair.find({$text: {$search: req.query.q}}, function (err, repairs) {
         if (err) return res.status(500);
         res.status(200).send(repairs);

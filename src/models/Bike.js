@@ -6,6 +6,7 @@ var BikeSchema = new mongoose.Schema({
     description: String
 });
 
+BikeSchema.index({'$**': 'text'});
 mongoose.model('Bike', BikeSchema);
 
 module.exports = mongoose.model('Bike');

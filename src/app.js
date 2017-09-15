@@ -6,6 +6,7 @@ var UserController = require('./controllers/UserController');
 var TransactionController = require('./controllers/TransactionController');
 var RepairController = require('./controllers/RepairController');
 var ItemController = require('./controllers/ItemController');
+var CustomerController = require('./controllers/CustomerController');
 
 var app = express();
 app.use(cors());
@@ -15,5 +16,6 @@ app.use('/users', UserController);
 app.use('/transactions', TransactionController);
 app.use('/items', ItemController);
 app.use('/repairs', RepairController);
+app.use('/customers', CustomerController);
 
 module.exports = app;
