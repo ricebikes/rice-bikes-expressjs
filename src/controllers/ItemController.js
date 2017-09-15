@@ -3,7 +3,7 @@ var router = express.Router();
 var bodyParser = require('body-parser');
 var Item = require('../models/Item');
 
-router.use(bodyParser.urlencoded({ extended: true }));
+router.use(bodyParser.json());
 
 router.get('/search', function (req, res) {
     Item.find({$text: {$search: req.query.q}}, function (err, items) {
