@@ -6,6 +6,7 @@ var Customer = require('./../models/Customer');
 var Bike = require('./../models/Bike');
 var Item = require('./../models/Item');
 var Repair = require('./../models/Repair');
+var _ = require('underscore');
 
 router.use(bodyParser.json());
 
@@ -65,6 +66,28 @@ router.get('/', function (req, res) {
     });
 });
 
+/*
+Gets all incomplete transactions - "GET /transactions/active"
+ */
+router.get('/active', function (req, res) {
+    Transaction.$where('this.transaction_type != "merch" && !this.complete')
+        .sort('-date_created')
+        .exec(function (err, transactions) {
+            if (err) return res.status(500);
+            res.status(200).send(transactions);
+        });
+});
+
+/*
+Gets all complete transactions - "GET /transactions/complete"
+ */
+router.get('/complete', function (req, res) {
+    Transaction.$where('this.complete === true').exec(function (err, transactions) {
+        if (err) return res.status(500);
+        res.status(200).send(transactions);
+    })
+});
+
 
 /**
  * Search helper. Searches in string for given string.
@@ -112,10 +135,24 @@ Gets a single transaction - "GET /transactions/:id"
  */
 router.get('/:id', function (req, res) {
     Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500).send(err);
+        if (err) return res.status(500);
         if (!transaction) return res.status(404).send("No transaction found.");
         res.status(200).send(transaction);
     });
+});
+
+/*
+Updates a single transaction - "PUT /transactions/:id"
+ */
+router.put('/:id', function (req, res) {
+   Transaction.findById(req.params.id, function (err, transaction) {
+       if (err) return res.status(500);
+       if (!transaction) return res.status(404);
+       transaction = _.extend(transaction, req.body);
+       transaction.save(function (err, transaction) {
+           res.status(200).send(transaction);
+       });
+   });
 });
 
 
@@ -225,7 +262,8 @@ router.post('/:id/repairs', function (req, res) {
         Repair.findById(req.body._id, function (err, repair) {
             if (err) return res.status(500);
             if (!repair) return res.status(404);
-            transaction.repairs.push(repair);
+            var rep = {"repair": repair, "completed": false};
+            transaction.repairs.push(rep);
             transaction.save(function (err, transaction) {
                 res.status(200).send(transaction);
             });

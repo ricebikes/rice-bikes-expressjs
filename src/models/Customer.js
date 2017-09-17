@@ -6,7 +6,7 @@ var CustomerSchema = new mongoose.Schema({
     email: String
 });
 
-CustomerSchema.index({'$**': 'text'});
+CustomerSchema.index({email: 'text'});
 mongoose.model('Customer', CustomerSchema);
 
 module.exports = mongoose.model('Customer');

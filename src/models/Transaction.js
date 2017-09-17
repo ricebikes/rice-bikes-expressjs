@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
-var transactionId = require('./TransactionId');
 var autoIncrement = require('mongoose-auto-increment');
+var _ = require('underscore');
 
 var connection = mongoose.createConnection('mongodb://localhost/RiceBikes');
 
@@ -10,9 +10,11 @@ var TransactionSchema = new mongoose.Schema({
     description: String,
     date_created: Date,
     transaction_type: String,
+    complete: {type: Boolean, default: false},
+    date_completed: Date,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer'},
     bikes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Bike'}],
-    repairs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Repair'}],
+    repairs: [{ repair: {type: mongoose.Schema.Types.ObjectId, ref: 'Repair'}, completed: Boolean }],
     items: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item'}]
 });
 
