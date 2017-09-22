@@ -24,7 +24,8 @@ app.use('/transactions', TransactionController);
 app.use('/items', ItemController);
 app.use('/repairs', RepairController);
 app.use('/customers', CustomerController);
-app.all('/', AuthController);
+
+// app.all('/', AuthController);
 
 app.set('secret', config.secret);
 

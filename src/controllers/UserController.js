@@ -4,6 +4,7 @@ var router = express.Router();
 var bodyParser = require('body-parser');
 var User = require('./../models/User');
 var config = require('../config');
+var app = require('../app');
 
 router.use(bodyParser.json());
 
@@ -47,7 +48,7 @@ router.post('/authenticate', function(req, res) {
            res.json({success: false, message: 'Incorrect password'})
        }
 
-       var token = jwt.sign(user, app.get('secret'), { expiresInMinutes: 1440 });
+       var token = jwt.sign({data: user}, config.secret, { expiresIn: '24h' });
 
        res.json({
            success: true,
