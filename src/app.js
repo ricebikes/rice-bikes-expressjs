@@ -27,6 +27,4 @@ app.use('/customers', CustomerController);
 
 // app.all('/', AuthController);
 
-app.set('secret', config.secret);
-
 module.exports = app;

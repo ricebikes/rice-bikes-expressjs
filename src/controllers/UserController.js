@@ -42,10 +42,14 @@ token, which we verify before processing the request.
 router.post('/authenticate', function(req, res) {
    User.findOne({ username: req.body.username }, function(err, user) {
        if (err) res.status(500);
-       if (!user) res.json({ success: false, message: 'Email not found' });
+       if (!user) {
+           res.json({ success: false, message: 'Email not found' });
+           return;
+       }
 
        if (user.password != req.body.password) {
-           res.json({success: false, message: 'Incorrect password'})
+           res.json({success: false, message: 'Incorrect password'});
+           return;
        }
 
        var token = jwt.sign({data: user}, config.secret, { expiresIn: '24h' });

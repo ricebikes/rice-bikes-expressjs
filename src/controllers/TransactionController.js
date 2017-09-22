@@ -1,5 +1,6 @@
 var express = require('express');
-var router = express.Router();
+// var router = express.Router();
+var router = require('./AuthController');
 var bodyParser = require('body-parser');
 var Transaction = require('./../models/Transaction');
 var Customer = require('./../models/Customer');
@@ -9,7 +10,6 @@ var Repair = require('./../models/Repair');
 var _ = require('underscore');
 
 router.use(bodyParser.json());
-
 
 /*
 Posts a single transaction - "POST /transactions"

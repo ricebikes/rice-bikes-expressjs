@@ -1,18 +1,18 @@
 var express = require('express');
 var jwt = require('jsonwebtoken');
-var router = express.Router();
+var authRouter = express.Router();
 var bodyParser = require('body-parser');
 var User = require('./../models/User');
 var config = require('../config');
 
-router.use(bodyParser.json());
+authRouter.use(bodyParser.json());
 
-router.use(function(req, res, next) {
+authRouter.use(function(req, res, next) {
 
     var token = req.body.token || req.query.token || req.headers['x-access-token'];
 
     if (token) {
-        jwt.verify(token, app.get('secret'), function(err, decoded) {
+        jwt.verify(token, config.secret, function(err, decoded) {
             if (err) {
                 return res.json({ success: false, message: 'Failed to authenticate token' });
             } else {
@@ -29,4 +29,4 @@ router.use(function(req, res, next) {
     }
 });
 
-module.exports = router;
+module.exports = authRouter;
