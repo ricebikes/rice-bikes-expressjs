@@ -3,11 +3,13 @@ var cors = require('cors');
 var morgan = require('morgan');
 
 var db = require('./db');
+var config = require('./config');
 var UserController = require('./controllers/UserController');
 var TransactionController = require('./controllers/TransactionController');
 var RepairController = require('./controllers/RepairController');
 var ItemController = require('./controllers/ItemController');
 var CustomerController = require('./controllers/CustomerController');
+var AuthController = require('./controllers/AuthController');
 
 var app = express();
 
@@ -22,5 +24,8 @@ app.use('/transactions', TransactionController);
 app.use('/items', ItemController);
 app.use('/repairs', RepairController);
 app.use('/customers', CustomerController);
+app.all('/', AuthController);
+
+app.set('secret', config.secret);
 
 module.exports = app;

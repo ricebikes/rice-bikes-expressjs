@@ -1,3 +1,4 @@
 var mongoose = require('mongoose');
+var config = require('./config');
 
-mongoose.connect('mongodb://localhost/RiceBikes');
+mongoose.connect(config.db_uri);

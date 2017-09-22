@@ -28,6 +28,7 @@ TransactionSchema.plugin(autoIncrement.plugin, 'Transaction');
 
 TransactionSchema.pre('find', autoPopulate);
 TransactionSchema.pre('findOne', autoPopulate);
+TransactionSchema.pre('save', autoPopulate);
 
 mongoose.model('Transaction', TransactionSchema);
 
