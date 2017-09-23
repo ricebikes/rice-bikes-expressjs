@@ -1,4 +1,4 @@
 module.exports = {
-    'secret': 'sheilawillneverbeforgotten',
+    'secret': 'TEST_SECRET',
     'db_uri': 'mongodb://localhost/RiceBikes'
 };
