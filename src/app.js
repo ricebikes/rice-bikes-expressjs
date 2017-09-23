@@ -9,7 +9,6 @@ var TransactionController = require('./controllers/TransactionController');
 var RepairController = require('./controllers/RepairController');
 var ItemController = require('./controllers/ItemController');
 var CustomerController = require('./controllers/CustomerController');
-var AuthController = require('./controllers/AuthController');
 
 var app = express();
 
@@ -24,7 +23,5 @@ app.use('/transactions', TransactionController);
 app.use('/items', ItemController);
 app.use('/repairs', RepairController);
 app.use('/customers', CustomerController);
-
-// app.all('/', AuthController);
 
 module.exports = app;

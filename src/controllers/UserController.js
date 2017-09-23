@@ -8,6 +8,9 @@ var app = require('../app');
 
 router.use(bodyParser.json());
 
+/*
+Create a user.
+ */
 router.post('/', function (req, res) {
     User.create({
             first_name : req.body.first_name,
@@ -37,18 +40,18 @@ router.get('/', function (req, res) {
 Authenticates a user, returning a token if the username and password match.
 
 The token is then stored in the browser until the session expires. All requests after authenticating are made using this
-token, which we verify before processing the request.
+token (in the headers 'x-access-token' or the body 'token'), which we verify before processing the request.
  */
 router.post('/authenticate', function(req, res) {
    User.findOne({ username: req.body.username }, function(err, user) {
        if (err) res.status(500);
        if (!user) {
-           res.json({ success: false, message: 'Email not found' });
+           res.status(401).json({ success: false, message: 'Email not found' });
            return;
        }
 
        if (user.password != req.body.password) {
-           res.json({success: false, message: 'Incorrect password'});
+           res.status(401).json({success: false, message: 'Incorrect password'});
            return;
        }
 

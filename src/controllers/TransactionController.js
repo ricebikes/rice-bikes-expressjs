@@ -1,6 +1,8 @@
 var express = require('express');
-// var router = express.Router();
+
+/* Wrap our router in our auth protocol */
 var router = require('./AuthController');
+
 var bodyParser = require('body-parser');
 var Transaction = require('./../models/Transaction');
 var Customer = require('./../models/Customer');
@@ -59,11 +61,12 @@ router.post('/', function (req, res) {
  Gets all transactions - "GET /transactions"
  */
 router.get('/', function (req, res) {
-    Transaction.find({}, function (err, transactions) {
-        if (err)
-            return res.status(500).send("There was a problem finding the transactions.");
-        res.status(200).send(transactions);
-    });
+    Transaction.find({})
+        .sort('-date_created')
+        .exec(function (err, transactions) {
+            if (err) return res.status(500);
+            res.status(200).send(transactions);
+        });
 });
 
 /*
