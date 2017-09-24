@@ -282,7 +282,9 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
     Transaction.findById(req.params.id, function (err, transaction) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
-        transaction.repairs.splice(find(function (e) { e._id = req.params.repair_id }), 1);
+        transaction.repairs.splice(_.findIndex(transaction.repairs, function (repair) {
+            return req.params.repair_id === repair.repair._id;
+        }), 1);
         transaction.save(function (err, transaction) {
             res.status(200).send(transaction);
         });
