@@ -247,7 +247,9 @@ router.delete('/:id/items/:item_id', function (req, res) {
     Transaction.findById(req.params.id, function (err, transaction) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
-        transaction.items.splice(find(function (i) { return i = req.params.item_id }), 1);
+        transaction.items.splice(_.findIndex(transaction.items, function (item) {
+            return req.params.item_id === item._id;
+        }), 1);        
         transaction.save(function (err, transaction) {
             res.status(200).send(transaction);
         });
