@@ -14,7 +14,7 @@ var TransactionSchema = new mongoose.Schema({
     date_completed: Date,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer'},
     bikes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Bike'}],
-    repairs: [{ repair: {type: mongoose.Schema.Types.ObjectId, ref: 'Repair'}, completed: Boolean }],
+    repairs: [{ repair: {type: mongoose.Schema.Types.ObjectId, ref: 'Repair'}, completed: {type: Boolean, default: false} }],
     items: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item'}]
 });
 
@@ -24,11 +24,19 @@ var autoPopulate = function (next) {
     next();
 };
 
+var autoPopulateDetail = function (next) {
+    this.populate('customer');
+    this.populate('bikes');
+    this.populate('repairs');
+    this.populate('items');
+    next();
+};
+
 TransactionSchema.plugin(autoIncrement.plugin, 'Transaction');
 
 TransactionSchema.pre('find', autoPopulate);
-TransactionSchema.pre('findOne', autoPopulate);
-TransactionSchema.pre('save', autoPopulate);
+TransactionSchema.pre('findOne', autoPopulateDetail);
+TransactionSchema.pre('save', autoPopulateDetail);
 
 mongoose.model('Transaction', TransactionSchema);
 
