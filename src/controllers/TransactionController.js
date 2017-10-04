@@ -184,7 +184,7 @@ router.post('/:id/bikes', function (req, res) {
         if (req.body._id) {
             Bike.findById(req.body._id, function (err, bike) {
                 if (!bike) return res.status(404).send("No bike found");
-                transaction.bikes.push(bike._id);
+                transaction.bikes.push(bike);
                 transaction.save();
             });
             res.status(200).send(transaction);
@@ -196,7 +196,7 @@ router.post('/:id/bikes', function (req, res) {
             },
             function (err, bike) {
                 if (err) return res.status(500);
-                transaction.bikes.push(bike._id);
+                transaction.bikes.push(bike);
                 transaction.save(function (err, transaction) {
                     res.status(200).send(transaction);
                 });
@@ -231,7 +231,7 @@ router.post('/:id/items', function (req, res) {
         Item.findById(req.body._id, function (err, item) {
             if (err) return res.status(500);
             if (!item) return res.status(404);
-            transaction.items.push(item._id);
+            transaction.items.push(item);
             transaction.save(function (err, transaction) {
                 res.status(200).send(transaction);
             });
@@ -248,8 +248,8 @@ router.delete('/:id/items/:item_id', function (req, res) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
         transaction.items.splice(_.findIndex(transaction.items, function (item) {
-            return req.params.item_id === item._id;
-        }), 1);        
+            return req.params.item_id == item._id;
+        }), 1);
         transaction.save(function (err, transaction) {
             res.status(200).send(transaction);
         });
@@ -284,9 +284,7 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
     Transaction.findById(req.params.id, function (err, transaction) {
         if (err) return res.status(500);
         if (!transaction) return res.status(404);
-        transaction.repairs.splice(_.findIndex(transaction.repairs, function (repair) {
-            return req.params.repair_id === repair.repair._id;
-        }), 1);
+        transaction.repairs = transaction.repairs.filter(function(rep) { return rep._id != req.params.repair_id});
         transaction.save(function (err, transaction) {
             res.status(200).send(transaction);
         });

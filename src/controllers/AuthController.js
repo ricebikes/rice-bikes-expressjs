@@ -25,7 +25,6 @@ authRouter.use(function(req, res, next) {
             success: false,
             message: 'No token provided.'
         });
-
     }
 });
 
