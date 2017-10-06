@@ -6,7 +6,7 @@ var ItemSchema = new mongoose.Schema({
     price: Number
 });
 
-ItemSchema.index({'$**': 'text'});
+ItemSchema.index({name: 'text'});
 mongoose.model('Item', ItemSchema);
 
 module.exports = mongoose.model('Item');
