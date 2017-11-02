@@ -49,19 +49,21 @@ router.get('/', function (req, res) {
                         if (!user) {
                             return res.status(401).json({ success: false, message: "Your netID is not listed as a mechanic"})
                         }
+                        // send our token to the frontend! now, whenever the user tries to access a resource, we check their
+                        // token by verifying it and seeing if the payload (the username) allows this user to access
+                        // the requested resource.
+                        res.json({
+                            success: true,
+                            message: 'CAS authentication success',
+                            user: {
+                                username: user.username,
+                                admin: user.admin,
+                                token: token
+                            }
+                        });
                     });
 
-                    // send our token to the frontend! now, whenever the user tries to access a resource, we check their
-                    // token by verifying it and seeing if the payload (the username) allows this user to access
-                    // the requested resource.
-                    res.json({
-                        success: true,
-                        message: 'CAS authentication success',
-                        user: {
-                            username: authSucceded.user,
-                            token: token
-                        }
-                    });
+
 
                 } else if (serviceResponse.authenticationFailure) {
                     res.status(401).json({ success: false, message: 'CAS authentication failed' });

@@ -14,6 +14,7 @@ var TransactionSchema = new mongoose.Schema({
     date_completed: Date,
     complete: {type: Boolean, default: false},
     is_paid: {type: Boolean, default: false},
+    waiting_part: {type: Boolean, default: false},
     total_cost: Number,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer'},
     bikes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Bike'}],
