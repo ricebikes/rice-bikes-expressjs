@@ -1,0 +1,36 @@
+html
+    head
+        meta(http-equiv='Content-Type', content='text/html; charset=UTF-8')
+        title Rice Bikes
+        link(rel="stylesheet", href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css", integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb", crossorigin="anonymous")
+        body(style="background: lightgray")
+            div.container.receipt-container.mt-5.p-5
+                h3.text-center Rice Bikes
+                div.my-5
+                    h5 Items
+                    table(style="width: 100%")
+                        each item in transaction.items
+                            tr
+                                td= item.name
+                                td= '$' + item.price
+                div.my-5
+                    h5 Repairs
+                    table(style="width: 100%")
+                        each repair in transaction.repairs
+                            tr
+                                td= repair.name
+                                td= '$' + repair.price
+                div.my-5
+                    table(style="width: 100%")
+                        tr
+                            td= 'Total'
+                            td= '$' + transaction.total_cost
+
+style.
+    .receipt-container {
+        width: 30%;
+        margin: 0 auto;
+        background: white;
+        height: 95%;
+        box-shadow: 0 10px 15px 0 rgba(0, 0, 0, 0.2);
+    }

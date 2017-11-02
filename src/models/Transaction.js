@@ -1,8 +1,9 @@
 var mongoose = require('mongoose');
 var autoIncrement = require('mongoose-auto-increment');
 var _ = require('underscore');
+var config = require('../config');
 
-var connection = mongoose.createConnection('mongodb://localhost/RiceBikes');
+var connection = mongoose.createConnection(config.db_uri);
 
 autoIncrement.initialize(connection);
 

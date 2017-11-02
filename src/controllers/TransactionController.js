@@ -1,7 +1,9 @@
 var express = require('express');
 
 /* Wrap our router in our auth protocol */
-var router = require('./AuthController');
+var router = express.Router();
+
+var authMiddleware = require('../middleware/AuthMiddleware');
 
 var bodyParser = require('body-parser');
 var Transaction = require('./../models/Transaction');
@@ -12,6 +14,7 @@ var Repair = require('./../models/Repair');
 var _ = require('underscore');
 
 router.use(bodyParser.json());
+router.use(authMiddleware);
 
 /*
 Posts a single transaction - "POST /transactions"
@@ -291,5 +294,41 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
     })
 });
 
+/*
+ Email handler
+ */
+router.get('/:id/email-notify', function (req, res) {
+    Transaction.findById(req.params.id, function (err, transaction) {
+        if (err) return res.status(500);
+        if (!transaction) return res.status(404);
+
+        res.mailer.send('email-notify-ready', {
+            to: transaction.customer.email,
+            subject: 'Rice Bikes - your bike is ready',
+            first_name: transaction.customer.first_name,
+            repairs: transaction.repairs,
+            items: transaction.items
+        }, function (err) {
+            if (err) return res.status(500);
+            res.status(200).send('OK');
+        });
+    });
+});
+
+router.get('/:id/email-receipt', function (req, res) {
+    Transaction.findById(req.params.id, function (err, transaction) {
+        if (err) return res.status(500);
+        if (!transaction) return res.status(404);
+
+        res.mailer.send('email-receipt', {
+            to: transaction.customer.email,
+            subject: 'Rice Bikes - Receipt',
+            transaction: transaction
+        }, function (err) {
+            if (err) return res.status(500);
+            res.status(200).send('OK');
+        })
+    });
+});
 
 module.exports = router;
