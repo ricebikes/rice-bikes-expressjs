@@ -43,15 +43,11 @@ router.get('/', function (req, res) {
                     // authSucceded contains: { user: <username>, attributes: <attributes>}
                     var token = jwt.sign({ data: authSucceded }, config.secret);
 
-                    // see if this netID exists as a user already. if not, create one.
+                    // see if this netID is in the list of users.
                     User.findOne({ username: authSucceded.user }, function (err, user) {
                         if (err) return res.status(500);
                         if (!user) {
-                            User.create({
-                                username: authSucceded.user
-                            }, function (err, newUser) {
-                                if (err) return res.status(500);
-                            });
+                            return res.status(401).json({ success: false, message: "Your netID is not listed as a mechanic"})
                         }
                     });
 

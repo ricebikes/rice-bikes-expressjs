@@ -11,9 +11,9 @@ router.use(bodyParser.json());
 router.use(authMiddleware);
 
 var checkIfAdmin = function(req, res, next) {
-    User.findOne({ username: req.userData.user.username }, function (err, user) {
-        if (err) res.status(500);
-        if (!user) res.status(404);
+    User.findOne({ username: req.userData.user }, function (err, user) {
+        if (err) return res.status(500);
+        if (!user) return res.status(404);
         if (!user.admin) {
             res.status(401);
         }
@@ -25,15 +25,15 @@ var checkIfAdmin = function(req, res, next) {
 Create a user.
  */
 router.post('/', function (req, res) {
-    User.findOne({ username: req.userData.user.username }, function (err, user) {
-        if (err) res.status(500);
-        if (!user) res.status(404);
+    User.findOne({ username: req.userData.user }, function (err, user) {
+        if (err) return res.status(500);
+        if (!user) return res.status(404);
         if (!user.admin) {
             res.status(401);
         }
         User.create({ username: req.body.username, admin: req.body.admin }, function (err, newUser) {
             if (err) res.status(500);
-            res.status(200);
+            res.status(200).send(newUser);
         });
     });
 });
