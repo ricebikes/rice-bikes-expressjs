@@ -4,7 +4,6 @@ var _ = require('underscore');
 var config = require('../config');
 
 var connection = mongoose.createConnection(config.db_uri);
-
 autoIncrement.initialize(connection);
 
 var TransactionSchema = new mongoose.Schema({
@@ -15,19 +14,26 @@ var TransactionSchema = new mongoose.Schema({
     complete: {type: Boolean, default: false},
     is_paid: {type: Boolean, default: false},
     waiting_part: {type: Boolean, default: false},
-    total_cost: Number,
+    total_cost: {type: Number, default: 0},
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer'},
     bikes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Bike'}],
     repairs: [{ repair: {type: mongoose.Schema.Types.ObjectId, ref: 'Repair'}, completed: Boolean }],
     items: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item'}]
 });
 
-// function to populate references with real data before sending
+// function which populates references with real data and updates values.
 var autoPopulate = function (next) {
     this.populate('customer');
     this.populate('bikes');
     this.populate('repairs.repair');
     this.populate('items');
+
+    // update total cost
+
+    let sum = _.reduce(this.repairs, (memo, rep) =>  memo + rep.price, 0);
+    sum += _.reduce(this.items, (memo, item) =>  memo + item.price, 0);
+    this.total_cost = sum;
+
     next();
 };
 

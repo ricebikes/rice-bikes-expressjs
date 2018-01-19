@@ -305,9 +305,7 @@ router.get('/:id/email-notify', function (req, res) {
         res.mailer.send('email-notify-ready', {
             to: transaction.customer.email,
             subject: 'Rice Bikes - your bike is ready',
-            first_name: transaction.customer.first_name,
-            repairs: transaction.repairs,
-            items: transaction.items
+            first_name: transaction.customer.first_name
         }, function (err) {
             if (err) return res.status(500);
             res.status(200).send('OK');

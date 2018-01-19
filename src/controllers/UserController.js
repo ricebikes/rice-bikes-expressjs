@@ -12,10 +12,10 @@ router.use(authMiddleware);
 
 var checkIfAdmin = function(req, res, next) {
     User.findOne({ username: req.userData.user }, function (err, user) {
-        if (err) return res.status(500);
-        if (!user) return res.status(404);
+        if (err) return res.status(500).send();
+        if (!user) return res.status(404).send();
         if (!user.admin) {
-            res.status(401);
+            return res.status(401).send();
         }
         next();
     });
@@ -29,7 +29,7 @@ router.post('/', function (req, res) {
         if (err) return res.status(500);
         if (!user) return res.status(404);
         if (!user.admin) {
-            res.status(401);
+            res.status(401).end();
         }
         User.create({ username: req.body.username, admin: req.body.admin }, function (err, newUser) {
             if (err) res.status(500);
@@ -53,29 +53,21 @@ router.get('/', function (req, res) {
 Delete a user.
  */
 router.delete('/:user_id', function (req, res) {
-    User.findOne({ username: req.userData.user.username }, function (err, user) {
+    User.findOne({ username: req.userData.user }, function (err, reqUser) {
         if (err) res.status(500);
-        if (!user) res.status(404);
-        if (!user.admin) {
-            res.status(401);
+        if (!reqUser) res.status(404);
+        if (!reqUser.admin) {
+            res.status(401).sendStatus();
         }
-        User.findById(req.query.user_id, function (err, user) {
-            if (err) res.status(500);
-            if (!user) res.status(404);
-            user.remove(function (err) { if (err) res.status(500)});
-            res.status(200);
+        User.findById(req.params.user_id, function (err, user) {
+            if (err) res.status(500).sendStatus();
+            if (!user) res.status(404).sendStatus();
+            user.remove(function (err) { if (err) res.status(500) });
+            res.status(200).end();
         });
     });
 
 });
-
-
-
-
-
-
-
-
 
 /*
 Authenticates a user, returning a token if the username and password match.

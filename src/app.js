@@ -22,7 +22,6 @@ app.use(cors());
 /* Add plugin to enable HTTP logging */
 app.use(morgan('combined'));
 
-
 app.set('views', __dirname + '/controllers');
 
 /* Set the template rendering engine to Pug - used for email rendering */
