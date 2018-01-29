@@ -27,13 +27,6 @@ var autoPopulate = function (next) {
     this.populate('bikes');
     this.populate('repairs.repair');
     this.populate('items');
-
-    // update total cost
-
-    let sum = _.reduce(this.repairs, (memo, rep) =>  memo + rep.price, 0);
-    sum += _.reduce(this.items, (memo, item) =>  memo + item.price, 0);
-    this.total_cost = sum;
-
     next();
 };
 

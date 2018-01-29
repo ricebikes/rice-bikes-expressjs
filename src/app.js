@@ -3,8 +3,8 @@ var cors = require('cors');
 var morgan = require('morgan');
 var mailer = require('express-mailer');
 
-var db = require('./db');
 var config = require('./config');
+var db = require('./db');
 
 var AuthController = require('./controllers/AuthController');
 var UserController = require('./controllers/UserController');
@@ -29,13 +29,13 @@ app.set('view engine', 'pug');
 
 /* Set up plugin to enable emailing */
 mailer.extend(app, {
-    from: "wbqhktpovp2flwjo@ethereal.email",
-    host: "smtp.ethereal.email",
+    from: config.email.user,
+    host: config.email.pass,
     port: 587,
     transportMethod: 'SMTP',
     auth: {
-        user: 'wbqhktpovp2flwjo@ethereal.email',
-        pass: 'mS7G33CBwcjFsDwc3Z'
+        user: config.email.user,
+        pass: config.email.pass
     }
 });
 
