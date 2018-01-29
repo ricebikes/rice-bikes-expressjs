@@ -1,9 +1,9 @@
 var mongoose = require('mongoose');
 
 var CustomerSchema = new mongoose.Schema({
-    first_name: String,
-    last_name: String,
-    email: String
+  first_name: String,
+  last_name: String,
+  email: String
 });
 
 CustomerSchema.index({'$**': 'text'});

@@ -1,9 +1,9 @@
 var mongoose = require('mongoose');
 
 var ItemSchema = new mongoose.Schema({
-    name: String,
-    description: String,
-    price: Number
+  name: String,
+  description: String,
+  price: Number
 });
 
 ItemSchema.index({name: 'text'});

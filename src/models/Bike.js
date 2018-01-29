@@ -1,9 +1,9 @@
 var mongoose = require('mongoose');
 
 var BikeSchema = new mongoose.Schema({
-    make: String,
-    model: String,
-    description: String
+  make: String,
+  model: String,
+  description: String
 });
 
 BikeSchema.index({'$**': 'text'});

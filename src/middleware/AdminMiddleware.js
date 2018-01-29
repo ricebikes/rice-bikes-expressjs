@@ -8,13 +8,13 @@ var config = require('../config');
 
 authRouter.use(bodyParser.json());
 
-authRouter.use(function(req, res, next) {
-    User.findOne({ username: req.userData.user }, function (err, user) {
-        if (err) return res.status(500).send();
-        if (!user) return res.status(404).send();
-        if (!user.admin) return res.status(401).send();
-        next();
-    });
+authRouter.use(function (req, res, next) {
+  User.findOne({username: req.userData.user}, function (err, user) {
+    if (err) return res.status(500).send();
+    if (!user) return res.status(404).send();
+    if (!user.admin) return res.status(401).send();
+    next();
+  });
 });
 
 module.exports = authRouter;

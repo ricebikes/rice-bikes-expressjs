@@ -29,14 +29,14 @@ app.set('view engine', 'pug');
 
 /* Set up plugin to enable emailing */
 mailer.extend(app, {
-    from: config.email.user,
-    host: config.email.pass,
-    port: 587,
-    transportMethod: 'SMTP',
-    auth: {
-        user: config.email.user,
-        pass: config.email.pass
-    }
+  from: config.email.user,
+  host: config.email.pass,
+  port: 587,
+  transportMethod: 'SMTP',
+  auth: {
+    user: config.email.user,
+    pass: config.email.pass
+  }
 });
 
 /* Register routes */
