@@ -101,8 +101,12 @@ router.get('/complete', function (req, res) {
  * @param query - string to look for
  * @returns {boolean}
  */
-var search = function search(str, query) {
-  return str.toLowerCase().search(query) != -1;
+var search = function (str, query) {
+  if (str) {
+    return str.toLowerCase().search(query) !== -1;
+  } else {
+    return false;
+  }
 };
 
 
@@ -113,14 +117,12 @@ router.get('/search', function (req, res) {
   Transaction.find({}).exec(function (err, transactions) {
     if (err) return res.status(500);
     transactions = transactions.filter(function (el) {
-      console.log(el);
       if (req.query.customer) {
         return search(el.customer.first_name, req.query.customer)
           || search(el.customer.last_name, req.query.customer)
           || search(el.customer.email, req.query.customer);
       } else if (req.query.bike) {
         for (var i = 0; i < el.bikes.length; i++) {
-          console.log(el.bikes[i]);
           if (search(el.bikes[i].make, req.query.bike)
             || search(el.bikes[i].model, req.query.bike)
             || search(el.bikes[i].description, req.query.bike)) {
