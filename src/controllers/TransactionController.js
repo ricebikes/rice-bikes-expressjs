@@ -122,7 +122,7 @@ router.get('/search', function (req, res) {
           || search(el.customer.last_name, req.query.customer)
           || search(el.customer.email, req.query.customer);
       } else if (req.query.bike) {
-        for (var i = 0; i < el.bikes.length; i++) {
+        for (let i = 0; i < el.bikes.length; i++) {
           if (search(el.bikes[i].make, req.query.bike)
             || search(el.bikes[i].model, req.query.bike)
             || search(el.bikes[i].description, req.query.bike)) {

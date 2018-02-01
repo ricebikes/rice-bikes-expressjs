@@ -6,6 +6,8 @@ module.exports = {
   frontendURL: 'http://localhost:4200',
   email: {
     user: 't4jves3pwjtt2svq@ethereal.email',
-    pass: 'mPsJ9XKegskYgEaqZr'
+    pass: 'mPsJ9XKegskYgEaqZr',
+    host: 'smtp.ethereal.email',
+    port: 587
   }
 };

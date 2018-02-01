@@ -30,8 +30,8 @@ app.set('view engine', 'pug');
 /* Set up plugin to enable emailing */
 mailer.extend(app, {
   from: config.email.user,
-  host: config.email.pass,
-  port: 587,
+  host: config.email.host,
+  port: config.email.port,
   transportMethod: 'SMTP',
   auth: {
     user: config.email.user,
