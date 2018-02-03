@@ -59,39 +59,18 @@ router.post('/', function (req, res) {
   }
 });
 
-
 /*
- Gets all transactions - "GET /transactions"
+Gets all transactions - "GET /transactions"
+
+If query parameters are supplied, they are passed in to the find function - "GET /transactions?complete=true" finds
+transactions with the property { "complete": true }.
  */
 router.get('/', function (req, res) {
-  Transaction.find({})
-    .sort('-date_created')
+  Transaction.find(req.query)
     .exec(function (err, transactions) {
-      if (err) return res.status(500);
-      res.status(200).send(transactions);
-    });
-});
-
-/*
-Gets all incomplete transactions - "GET /transactions/active"
- */
-router.get('/active', function (req, res) {
-  Transaction.$where('this.transaction_type != "merch" && !this.complete')
-    .sort('-date_created')
-    .exec(function (err, transactions) {
-      if (err) return res.status(500);
-      res.status(200).send(transactions);
-    });
-});
-
-/*
-Gets all complete transactions - "GET /transactions/complete"
- */
-router.get('/complete', function (req, res) {
-  Transaction.$where('this.complete === true').exec(function (err, transactions) {
-    if (err) return res.status(500);
-    res.status(200).send(transactions);
-  })
+      if (err) return res.status(500).send();
+      return res.status(200).send(transactions);
+    })
 });
 
 
@@ -112,7 +91,7 @@ var search = function (str, query) {
 
 /*
  Searches for transactions by customer XOR bike XOR transaction description - "GET /transactions/search?customer="
- */
+*/
 router.get('/search', function (req, res) {
   Transaction.find({}).exec(function (err, transactions) {
     if (err) return res.status(500);
@@ -148,6 +127,7 @@ router.get('/:id', function (req, res) {
     res.status(200).send(transaction);
   });
 });
+
 
 /*
 Updates a single transaction - "PUT /transactions/:id"
