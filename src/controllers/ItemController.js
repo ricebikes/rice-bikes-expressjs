@@ -6,7 +6,6 @@ var User = require('../models/User');
 var adminMiddleware = require('../middleware/AdminMiddleware');
 
 router.use(bodyParser.json());
-router.use(adminMiddleware);
 
 router.get('/search', function (req, res) {
   Item.find({$text: {$search: req.query.q}}, function (err, items) {
@@ -14,6 +13,8 @@ router.get('/search', function (req, res) {
     res.status(200).send(items);
   });
 });
+
+router.use(adminMiddleware);
 
 router.post('/', function (req, res) {
   User.findOne({username: req.userData.user}, function (err, user) {

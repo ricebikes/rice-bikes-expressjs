@@ -235,12 +235,15 @@ router.delete('/:id/items/:item_id', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
     if (err) return res.status(500);
     if (!transaction) return res.status(404);
-    transaction.repairs = transaction.repairs.filter(function (item) {
+
+    for (let i = 0; i < transaction.items.length; i++) {
+      let item = transaction.items[i];
       if (item._id == req.params.item_id) {
         transaction.total_cost -= item.price;
-        return false;
-      } else return true;
-    });
+        transaction.items.splice(i, 1);
+        break;
+      }
+    }
     transaction.save(function (err, transaction) {
       res.status(200).send(transaction);
     });
