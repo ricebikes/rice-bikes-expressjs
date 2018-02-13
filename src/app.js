@@ -40,11 +40,11 @@ mailer.extend(app, {
 });
 
 /* Register routes */
-app.use('/api/auth', AuthController);
-app.use('/api/users', UserController);
-app.use('/api/transactions', TransactionController);
-app.use('/api/items', ItemController);
-app.use('/api/repairs', RepairController);
-app.use('/api/customers', CustomerController);
+app.use('/auth', AuthController);
+app.use('/users', UserController);
+app.use('/transactions', TransactionController);
+app.use('/items', ItemController);
+app.use('/repairs', RepairController);
+app.use('/customers', CustomerController);
 
 module.exports = app;
