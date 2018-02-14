@@ -1,4 +1,6 @@
-module.exports = function() {
+
+
+let CONFIG = function() {
   if (process.env.NODE_ENV == 'prod') {
     return {
       secret: 'da427f7f3d4070822370352f976a7e9f26ee2590127d7dd5a4be1b0b9e647f29',
@@ -29,3 +31,5 @@ module.exports = function() {
     }
   }
 };
+
+module.exports = CONFIG;

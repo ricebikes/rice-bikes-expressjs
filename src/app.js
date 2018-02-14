@@ -3,7 +3,7 @@ var cors = require('cors');
 var morgan = require('morgan');
 var mailer = require('express-mailer');
 
-var config = require('./config');
+var config = require('./config')();
 var db = require('./db');
 
 var AuthController = require('./controllers/AuthController');
