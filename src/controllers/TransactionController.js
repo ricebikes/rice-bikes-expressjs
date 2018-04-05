@@ -139,11 +139,14 @@ router.put('/:id', function (req, res) {
 
     // if the bike coming in has just been paid (it was just completed), send receipt email
     if (!transaction.is_paid && req.body.is_paid) {
+      let date = new Date();
+      date.toLocaleString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
       res.mailer.send('email-receipt', {
         to: transaction.customer.email,
         subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
         transaction: transaction,
-        date: Date.now().toLocaleString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+        date: date
       }, function (err) {
         if (err) return res.status(500);
         res.status(200).send('OK');
