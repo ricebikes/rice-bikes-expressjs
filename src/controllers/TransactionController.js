@@ -142,7 +142,8 @@ router.put('/:id', function (req, res) {
       res.mailer.send('email-receipt', {
         to: transaction.customer.email,
         subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
-        transaction: transaction
+        transaction: transaction,
+        date: Date.now()
       }, function (err) {
         if (err) return res.status(500);
         res.status(200).send('OK');

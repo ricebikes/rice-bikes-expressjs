@@ -5,7 +5,7 @@ html
             body {
                 font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
                 color: #3d3d3d;
-                background: #f9f9f9;
+                background-color: #f9f9f9;
             }
             table {
                 border-collapse: collapse;
@@ -45,7 +45,8 @@ html
             img {
                 margin-bottom: 30px;
                 margin-top: 30px;
-                filter: invert(80%);
+                filter: invert(80%) !important;
+                -webkit-filter: invert(80%) !important;
             }
     body
         .container
@@ -55,7 +56,7 @@ html
                 p Below is your receipt.
                 .divider
                 p.centered transaction #{transaction._id}
-                p.centered #{transaction.date_created}
+                p.centered #{date}
             .items-list
                 h4
                     | Items
