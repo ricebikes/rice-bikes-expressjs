@@ -136,6 +136,19 @@ router.put('/:id', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
     if (err) return res.status(500);
     if (!transaction) return res.status(404);
+
+    // if the bike coming in has just been paid (it was just completed), send receipt email
+    if (!transaction.is_paid && req.body.is_paid) {
+      res.mailer.send('email-receipt', {
+        to: transaction.customer.email,
+        subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
+        transaction: transaction
+      }, function (err) {
+        if (err) return res.status(500);
+        res.status(200).send('OK');
+      });
+    }
+
     transaction = _.extend(transaction, req.body);
     transaction.save(function (err, transaction) {
       res.status(200).send(transaction);
@@ -302,7 +315,7 @@ router.get('/:id/email-notify', function (req, res) {
 
     res.mailer.send('email-notify-ready', {
       to: transaction.customer.email,
-      subject: 'Rice Bikes - your bike is ready',
+      subject: `Rice Bikes - your bike is ready - ${transaction._id}`,
       first_name: transaction.customer.first_name
     }, function (err) {
       if (err) return res.status(500);
@@ -318,7 +331,7 @@ router.get('/:id/email-receipt', function (req, res) {
 
     res.mailer.send('email-receipt', {
       to: transaction.customer.email,
-      subject: 'Rice Bikes - Receipt',
+      subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
       transaction: transaction
     }, function (err) {
       if (err) return res.status(500);
