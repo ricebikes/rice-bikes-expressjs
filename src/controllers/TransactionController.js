@@ -143,7 +143,7 @@ router.put('/:id', function (req, res) {
         to: transaction.customer.email,
         subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
         transaction: transaction,
-        date: Date.now()
+        date: Date.now().toLocaleString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
       }, function (err) {
         if (err) return res.status(500);
         res.status(200).send('OK');
