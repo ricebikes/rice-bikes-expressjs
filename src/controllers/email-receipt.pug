@@ -1,36 +1,90 @@
+doctype html
 html
     head
-        meta(http-equiv='Content-Type', content='text/html; charset=UTF-8')
-        title Rice Bikes
-        link(rel="stylesheet", href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css", integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb", crossorigin="anonymous")
-        body(style="background: lightgray")
-            div.container.receipt-container.mt-5.p-5
-                h3.text-center Rice Bikes
-                div.my-5
-                    h5 Items
-                    table(style="width: 100%")
-                        each item in transaction.items
-                            tr
-                                td= item.name
-                                td= '$' + item.price
-                div.my-5
-                    h5 Repairs
-                    table(style="width: 100%")
-                        each repair in transaction.repairs
-                            tr
-                                td= repair.name
-                                td= '$' + repair.price
-                div.my-5
-                    table(style="width: 100%")
-                        tr
-                            td= 'Total'
-                            td= '$' + transaction.total_cost
+        style.
+            body {
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                color: #3d3d3d;
+                background: #f9f9f9;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                display: inline;
+                margin: 10px;
+            }
+            td, th {
+                border: 1px solid #dddddd;
+                text-align: left;
+                padding: 8px;
+                width: 200px;
+            }
+            tr:nth-child(even) {
+                background-color: #dddddd;
+            }
+            .divider {
+                min-height: 50px;
+            }
+            .container {
+                margin: 0 auto;
+                width: 400px;
+                background: white;
+                padding: 10px;
+                border-radius: 8px;
+                margin-top: 30px;
+                margin-bottom: 30px;
+                box-shadow: 0px 60px 50px 10px rgba(100,100,100,.1);
+            }
+            .centered {
+                text-align: center;
+            }
+            .items-list {
+                margin: 0 auto;
+                width: 80%;
+            }
+            img {
+                margin-bottom: 30px;
+                margin-top: 30px;
+                filter: invert(80%);
+            }
+    body
+        .container
+            .centered
+                h2 Your Rice Bikes receipt
+                p Thank you for visiting Rice Bikes!
+                p Below is your receipt.
+                .divider
+                p.centered transaction #{transaction._id}
+                p.centered #{transaction.date_created}
+            .items-list
+                h4
+                    | Items
 
-style.
-    .receipt-container {
-        width: 30%;
-        margin: 0 auto;
-        background: white;
-        height: 95%;
-        box-shadow: 0 10px 15px 0 rgba(0, 0, 0, 0.2);
-    }
+                    each item in transaction.items
+                        ul
+                            li #{item.name} - $#{item.price}
+                h4
+                    | Repairs
+
+                    each repair in transaction.repairs
+                        ul
+                            li #{repair.name} - $#{repair.price}
+                    h4 Total
+
+                    strong $#{transaction.total_cost}
+            .divider
+            .centered
+                p Thank you!
+                p
+                    strong Rice Bikes
+                .divider
+                    | ------------------------------------------
+                p
+                    | Leave us some
+                    a(href="https://ricebikes.typeform.com/to/FE3uA3") feedback!
+                p
+                    | Like us on
+                    a(href="http://bikes.rice.edu/") Facebook!
+                p
+                    a(href="bikes.rice.edu") bikes.rice.edu
+                img(width="100" height="100" src="https://bikes.riceapps.org/assets/img/rice-bikes_white.png")
