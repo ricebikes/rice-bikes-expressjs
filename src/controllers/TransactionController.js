@@ -136,8 +136,10 @@ Updates a single transaction - "PUT /transactions/:id"
  */
 router.put('/:id', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
-    if (err) return res.status(500);
-    if (!transaction) return res.status(404);
+    if (err) return res.status(500).send();
+    if (!transaction) return res.status(404).send();
+
+    let date = moment().format('MMMM Do YYYY, h:mm:ss a');
 
     // if the bike coming in has just been paid (it was just completed), send receipt email
     if (!transaction.is_paid && req.body.is_paid) {
@@ -145,7 +147,7 @@ router.put('/:id', function (req, res) {
         to: transaction.customer.email,
         subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
         transaction: transaction,
-        date: moment().format('MMMM Do YYYY, h:mm:ss a')
+        date: date
       }, function (err) {
         if (err) return res.status(500);
         res.status(200).send('OK');
