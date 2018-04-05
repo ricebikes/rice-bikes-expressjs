@@ -3,6 +3,8 @@ var express = require('express');
 /* Wrap our router in our auth protocol */
 var router = express.Router();
 
+var moment = require('moment');
+
 var authMiddleware = require('../middleware/AuthMiddleware');
 
 var bodyParser = require('body-parser');
@@ -139,14 +141,11 @@ router.put('/:id', function (req, res) {
 
     // if the bike coming in has just been paid (it was just completed), send receipt email
     if (!transaction.is_paid && req.body.is_paid) {
-      let date = new Date();
-      date.toLocaleString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
       res.mailer.send('email-receipt', {
         to: transaction.customer.email,
         subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
         transaction: transaction,
-        date: date
+        date: moment().format('MMMM Do YYYY, h:mm:ss a')
       }, function (err) {
         if (err) return res.status(500);
         res.status(200).send('OK');
