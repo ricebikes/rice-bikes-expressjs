@@ -4,10 +4,10 @@ let CONFIG = function() {
   if (process.env.NODE_ENV == 'prod') {
     return {
       secret: 'TEST_SECRET',
-      db_uri: 'mongodb://riceapps:r1ce4pps$wag1@ds121945.mlab.com:21945/ricebikes-dev',
+      db_uri: 'mongodb://USERNAME:PASSWORD@localhost/bikes',
       CASValidateURL: 'https://idp.rice.edu/idp/profile/cas/serviceValidate',
-      CASthisServiceURL: 'https://bikes.riceapps.org/auth',
-      frontendURL: 'https://bikes.riceapps.org',
+      CASthisServiceURL: 'https://ricebikes.ml/auth',
+      frontendURL: 'https://ricebikes.ml',
       email: {
         user: 't4jves3pwjtt2svq@ethereal.email',
         pass: 'mPsJ9XKegskYgEaqZr',
@@ -18,7 +18,7 @@ let CONFIG = function() {
   } else {
     return {
       secret: 'TEST_SECRET',
-      db_uri: 'mongodb://riceapps:r1ce4pps$wag1@ds121945.mlab.com:21945/ricebikes-dev',
+      db_uri: 'mongodb://USERNAME:PASSWORD@localhost/bikes',
       CASValidateURL: 'https://idp.rice.edu/idp/profile/cas/serviceValidate',
       CASthisServiceURL: 'http://localhost:4200/auth',
       frontendURL: 'http://localhost:4200',

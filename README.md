@@ -2,6 +2,7 @@
 ExpressJS/MongoDB backend for Rice Bikes
 
 # Installation
+A local database running MongoDB version 3.2 is required for this project. It can be downloaded from [here](https://www.mongodb.com/download-center/community)
 
 This assumes you have Node and NPM installed. If you don't, install [Node.](https://nodejs.org)
 
