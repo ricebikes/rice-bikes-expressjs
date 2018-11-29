@@ -18,7 +18,7 @@ let CONFIG = function() {
   } else {
     return {
       secret: 'TEST_SECRET',
-      db_uri: 'mongodb://USERNAME:PASSWORD@localhost/bikes',
+      db_uri: 'mongodb://bikesdev:itstacotime@localhost/bikes',
       CASValidateURL: 'https://idp.rice.edu/idp/profile/cas/serviceValidate',
       CASthisServiceURL: 'http://localhost:4200/auth',
       frontendURL: 'http://localhost:4200',

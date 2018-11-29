@@ -73,6 +73,7 @@ router.get('/', function (req, res) {
       if (err) return res.status(500).send();
       return res.status(200).send(transactions);
     })
+
 });
 
 

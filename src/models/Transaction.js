@@ -13,6 +13,7 @@ var TransactionSchema = new mongoose.Schema({
   date_completed: Date,
   complete: {type: Boolean, default: false},
   is_paid: {type: Boolean, default: false},
+    refurb: {type:Boolean, default:false},
   waiting_part: {type: Boolean, default: false},
   waiting_email: {type: Boolean, default: false},
   total_cost: {type: Number, default: 0},
