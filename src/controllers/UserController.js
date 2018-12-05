@@ -10,9 +10,45 @@ var authMiddleware = require('../middleware/AuthMiddleware');
 router.use(bodyParser.json());
 router.use(authMiddleware);
 
+// add middleware function to prevent non-admins from using this page
 
+router.use('/',function (req, res, next) {
+    // verify user token
+    let token = req.body.token || req.query.token || req.headers['x-access-token'];
+    if(token) {
+        jwt.verify(token, config.secret, function (err, decoded) {
+            if (err) {
+                // kick back error from JWT verification
+                return res.status(401).json({success: false, message: 'Failed to authenticate token'});
+            } else {
+                // we got a valid token, see if the user can authenticate against this resource
+                let user_roles = decoded.user.roles;
+                let username = decoded.user.username;
+                // first do a check to make sure user is in database (so someone cannot use an old token with admin privileges
+                User.findOne({username:username},function (err,user) {
+                    if(err) return res.status(500).send("error finding your username in the database");
+                    if(!user) return res.status(401).send("You are not authorized to access this resource");
+                    // now if we make it here we can check for admin privileges
+                    if(user_roles.includes('admin')){
+                        // user is permitted to access this resource!
+                        next();
+                    }else{
+                        return res.status(401).json(
+                            {success: false,
+                                message: 'Your token appears valid, but your are not permitted to access this resource'});
+                    }
+                });
+            }
+        })
+    }else {
+        return res.status(401).json({
+            success: false,
+            message: 'No Token Provided'
+        })
+    }
+});
 var checkIfAdmin = function (req, res, next) {
-  User.findOne({username: req.userData.user}, function (err, user) {
+  User.findOne({username: req.userData.username}, function (err, user) {
     if (err) return res.status(500).send();
     if (!user) return res.status(404).send();
     if (!user.admin) {
@@ -26,18 +62,11 @@ var checkIfAdmin = function (req, res, next) {
 Create a user.
  */
 router.post('/', function (req, res) {
-  User.findOne({username: req.userData.user}, function (err, user) {
-    if (err) return res.status(500);
-    if (!user) return res.status(404);
-    if (!user.admin) {
-      res.status(401).end();
-    }
-    User.create({username: req.body.username, admin: req.body.admin}, function (err, newUser) {
+    User.create({username: req.body.username, roles:req.body.roles}, function (err, newUser) {
       if (err) res.status(500);
       res.status(200).send(newUser);
     });
   });
-});
 
 /*
 Gets all users - "GET /user"
@@ -54,23 +83,16 @@ router.get('/', function (req, res) {
 Delete a user.
  */
 router.delete('/:user_id', function (req, res) {
-  User.findOne({username: req.userData.user}, function (err, reqUser) {
-    if (err) res.status(500);
-    if (!reqUser) res.status(404);
-    if (!reqUser.admin) {
-      res.status(401).sendStatus();
-    }
     User.findById(req.params.user_id, function (err, user) {
-      if (err) res.status(500).sendStatus();
-      if (!user) res.status(404).sendStatus();
+      if (err) res.status(500).send();
+      if (!user) res.status(404).send();
       user.remove(function (err) {
-        if (err) res.status(500)
+        if (err) res.status(500).send("There was a problem deleting the user")
       });
       res.status(200).end();
     });
   });
 
-});
 
 /*
 Authenticates a user, returning a token if the username and password match.

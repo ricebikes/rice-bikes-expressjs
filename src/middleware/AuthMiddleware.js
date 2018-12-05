@@ -12,7 +12,6 @@ authRouter.use(bodyParser.json());
  * request if it is not signed. All controllers use this middleware
  * to enable token verification. Useful note: the JWT token is generated using
  * rice IDP data, this means that if you change the currentuser token you will still be authenticated
- * TODO: find a way to sign currentuser token
  */
 authRouter.use(function (req, res, next) {
 
@@ -23,7 +22,9 @@ authRouter.use(function (req, res, next) {
       if (err) {
         return res.status(401).json({success: false, message: 'Failed to authenticate token'});
       } else {
-        req.userData = userData.data;
+        // token did authenticate. Make sure username and user roles get passed along
+        req.userData = userData.user;
+        // we can use the user roles to deny a non admin from editing users, for example.
         next();
       }
     });

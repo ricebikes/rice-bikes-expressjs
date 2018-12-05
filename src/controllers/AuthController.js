@@ -38,28 +38,29 @@ router.get('/', function (req, res) {
 
         var authSucceeded = serviceResponse.authenticationSuccess;
         if (authSucceeded) {
-          // here, we create a token with the user's info as its payload.
-          // authSucceded contains: { user: <username>, attributes: <attributes>}
-          var token = jwt.sign({data: authSucceeded}, config.secret);
-
           // see if this netID is in the list of users.
           User.findOne({username: authSucceeded.user}, function (err, user) {
             if (err) return res.status(500).send();
             if (!user) {
               return res.status(401).json({success: false, message: "Your net ID is not listed as a mechanic"})
             }
-
+            //quick explanation of a JWT: essentially a symmetrically encrypted key, designed to be readable by anyone
+            // but not allow them to modify its contents. JWT is signed with the key "secret"
+            // we will sign the Rice IDP payload, as well as our own payload from the mongodb database
+            let token = jwt.sign({
+                user:{
+                  username: user.username,
+                  roles: user.roles,
+                },
+                idp_data:authSucceeded
+            },config.secret);
             // send our token to the frontend! now, whenever the user tries to access a resource, we check their
-            // token by verifying it and seeing if the payload (the username) allows this user to access
+            // token by verifying it and seeing if the username contained in the token allows this user to access
             // the requested resource.
             return res.json({
-              success: true,
-              message: 'CAS authentication success',
-              user: {
-                username: user.username,
-                roles: user.roles,
+                success: true,
+                message: 'CAS authentication success',
                 token: token
-              }
             });
           });
         } else if (serviceResponse.authenticationFailure) {
