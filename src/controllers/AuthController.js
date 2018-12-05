@@ -57,7 +57,7 @@ router.get('/', function (req, res) {
               message: 'CAS authentication success',
               user: {
                 username: user.username,
-                admin: user.admin,
+                roles: user.roles,
                 token: token
               }
             });
