@@ -151,7 +151,7 @@ router.put('/:id', function (req, res) {
         date: date
       }, function (err) {
         if (err) return res.status(500);
-        res.status(200).send('OK');
+        //res.status(200).send('OK');
       });
     }
 
@@ -324,6 +324,7 @@ router.get('/:id/email-notify', function (req, res) {
       subject: `Rice Bikes - your bike is ready - ${transaction._id}`,
       first_name: transaction.customer.first_name
     }, function (err) {
+      console.log('Notified!');
       if (err) return res.status(500);
       res.status(200).send('OK');
     });
@@ -334,13 +335,14 @@ router.get('/:id/email-receipt', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
     if (err) return res.status(500);
     if (!transaction) return res.status(404);
-
+    console.log('about to mail!');
     res.mailer.send('email-receipt', {
       to: transaction.customer.email,
       subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
       transaction: transaction
     }, function (err) {
       if (err) return res.status(500);
+      console.log("sent that mail!");
       res.status(200).send('OK');
     })
   });
