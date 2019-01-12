@@ -69,7 +69,7 @@ html
 
                     each repair in transaction.repairs
                         ul
-                            li #{repair.name} - $#{repair.price}
+                            li #{repair.repair.name} - $#{repair.repair.price}
                     h4 Total
 
                     strong $#{transaction.total_cost}
