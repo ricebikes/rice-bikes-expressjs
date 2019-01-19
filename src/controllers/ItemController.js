@@ -16,18 +16,29 @@ router.get('/search', function (req, res) {
 
 router.use(adminMiddleware);
 
+
+// adds an item to the db. Note that quantity should start at 0
 router.post('/', function (req, res) {
-  User.findOne({username: req.userData.user}, function (err, user) {
-    if (err) return res.status(500);
-    if (!user) return res.status(404);
-    if (!user.admin) {
-      res.status(401).end();
-    }
-    Item.create({name: req.body.name, description: req.body.description, price: req.body.price}, function (err, item) {
-      if (err) return res.status(500).send();
-      res.status(200).send(item);
-    })
-  });
+  Item.create({
+    category: req.body.category,
+    name: req.body.name,
+    description: req.body.description,
+    price: req.body.price,
+    shop_cost: req.body.cost
+  }, function (err, item) {
+    if (err) return res.status(500).send(err);
+    res.status(200).send(item);
+  })
+});
+// let an item be updated
+router.put('/:id',function (req,res) {
+  {
+    Item.findByIdAndUpdate(req.params.id,req.body,{new:true},function (err,item) {
+      if(err) return res.status(500).send(err);
+      if(!repair) return res.status(404).send();
+      return res.status(200).send(repair);
+    });
+  }
 });
 
 module.exports = router;

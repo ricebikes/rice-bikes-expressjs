@@ -8,11 +8,7 @@ var adminMiddleware=require('../middleware/AdminMiddleware');
 router.use(bodyParser.json());
 router.use(authmiddleware);
 
-// add middleware to prevent non admins from using this page
-// NOTE: the /search url should be accessible to non-admin users, do not block it.
-// we do this by adding an exception in the admin middleware
-// TODO: find a cleaner way than using this exception
-router.use(adminMiddleware);
+
 
 router.get('/search', function (req, res) {
   Repair.find({$text: {$search: req.query.q}}, function (err, repairs) {
@@ -21,7 +17,9 @@ router.get('/search', function (req, res) {
   });
 });
 
+// everything below here is only for admins, so use the admin middleware to block it
 
+router.use(adminMiddleware);
 // get all repairs
 router.get('/',function (req, res) {
     Repair.find({}, function (err,repairs) {
