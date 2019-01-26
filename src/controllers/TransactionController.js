@@ -13,6 +13,7 @@ var Customer = require('./../models/Customer');
 var Bike = require('./../models/Bike');
 var Item = require('./../models/Item');
 var Repair = require('./../models/Repair');
+var User = require('./../models/User');
 var _ = require('underscore');
 
 router.use(bodyParser.json());
@@ -137,11 +138,55 @@ Updates a single transaction - "PUT /transactions/:id"
  */
 router.put('/:id', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
-    if (err) return res.status(500).send();
+    if (err) return res.status(500).send(err);
     if (!transaction) return res.status(404).send();
 
     let date = moment().format('MMMM Do YYYY, h:mm:ss a');
+    // if the bike coming in has just been completed, decrement the inventory of the items on the transaction
+    if (!transaction.complete && req.body.complete) {
+      for (let item of req.body.items) {
+        Item.findById(item._id, function (err, found_item) {
+          if (err) return res.status(500).send(err);
+          //lower the item inventory
+          found_item.quantity -= 1;
+          // if inventory drops below warning value, send an alert email
+          if (found_item.quantity <= found_item.warning_quantity) {
+            // send an alert email to any user with the operations role
+            User.find({roles:'operations'},function (err, user_array) {
+              for (user of user_array){
+                  let email = user.username+'@rice.edu';
+                  res.mailer.send('email-lowstock',{
+                    to:email,
+                    subject: `Low Stock Alert - ${found_item.name}`,
+                    name:user.username,
+                    item:found_item
+                  }, function (err) {
+                    if(err) console.log(err);
+                  });
+              }
+            })
+          }
+          found_item.save(function (err, new_item) {
+            if (err) return res.status(500).send(err);
 
+          })
+        });
+      }
+    }
+    // in addition, make sure that if a bike is re-opened quantity is raised
+    else if (transaction.complete && !req.body.complete) {
+      for (let item of req.body.items) {
+        Item.findById(item._id, function (err, found_item) {
+          if (err) return res.status(500).send(err);
+          //lower the item inventory
+          found_item.quantity += 1;
+          found_item.save(function (err, new_item) {
+            if (err) return res.status(500).send(err);
+
+          })
+        });
+      }
+    }
     // if the bike coming in has just been paid (it was just completed), send receipt email
     if (!transaction.is_paid && req.body.is_paid) {
       res.mailer.send('email-receipt', {
@@ -154,12 +199,12 @@ router.put('/:id', function (req, res) {
         //res.status(200).send('OK');
       });
     }
-
     transaction = _.extend(transaction, req.body);
-    transaction.save(function (err, transaction) {
-      res.status(200).send(transaction);
+    transaction.save(function (err, transaction_new) {
+      if (err) return res.status(500).send(err);
+      res.status(200).send(transaction_new);
     });
-  });
+  })
 });
 
 
@@ -324,7 +369,6 @@ router.get('/:id/email-notify', function (req, res) {
       subject: `Rice Bikes - your bike is ready - ${transaction._id}`,
       first_name: transaction.customer.first_name
     }, function (err) {
-      console.log('Notified!');
       if (err) return res.status(500);
       res.status(200).send('OK');
     });
