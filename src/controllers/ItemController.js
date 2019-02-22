@@ -6,13 +6,47 @@ var adminMiddleware = require('../middleware/AdminMiddleware');
 
 router.use(bodyParser.json());
 
-router.get('/search', function (req, res) {
-  Item.find({$text: {$search: req.query.q}}, function (err, items) {
-    if (err) return res.status(500);
-    res.status(200).send(items);
-  });
+
+// allows frontend to dynamically populate dropdown menu of categories
+router.get('/categories',function (req,res) {
+  Item.distinct('category',function (err, categories) {
+    if (err) return res.status(500).send("Error getting distinct categories!");
+    res.status(200).send(categories);
+  })
 });
 
+// allows dynamic population of size parameter in dropdown
+router.get('/sizes',function (req,res) {
+  // note: request must have a category query associated with it
+  Item.distinct('size',{category:req.query.category},function (err, sizes) {
+    if(err) return res.status(500).send(err);
+    res.status(200).send(sizes);
+  })
+});
+
+router.get('/search', function (req, res) {
+  // switch to see if our query defines a name
+  if(req.query.name){
+    query_object = {
+      $text:{$search:req.query.name},
+      category: req.query.category,
+      size: req.query.size
+    };
+  } else{
+    query_object = {
+      category: req.query.category,
+      size: req.query.size
+    };
+  }
+  // now remove any undefined values from query so it will succeed
+  Object.keys(query_object).forEach(key => (query_object[key] == null) && delete query_object[key]);
+  Item.find(query_object, function (err, items) {
+      if (err) return res.status(500);
+      res.status(200).send(items);
+    });
+});
+
+// everything below here is only for admins, so use the admin middleware to block it
 router.use(adminMiddleware);
 
 

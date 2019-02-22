@@ -1,6 +1,8 @@
 var mongoose = require('mongoose');
 
 var ItemSchema = new mongoose.Schema({
+  category: String,
+  size: String,
   name: {type:String,required:true},
   description: String,
   price: {type:Number,required:true},
@@ -8,8 +10,8 @@ var ItemSchema = new mongoose.Schema({
   quantity:{type:Number,default:0},
   warning_quantity:Number
 });
-
-ItemSchema.index({name: 'text'});
+// text index lets us search by name
+ItemSchema.index({name:'text'});
 mongoose.model('Item', ItemSchema);
 
 module.exports = mongoose.model('Item');
