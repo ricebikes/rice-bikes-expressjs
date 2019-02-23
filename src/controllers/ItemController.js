@@ -26,16 +26,19 @@ router.get('/sizes',function (req,res) {
 
 router.get('/search', function (req, res) {
   // switch to see if our query defines a name
+  // TODO: raise the quantity to zero once inventory is managed correctly
   if(req.query.name){
     query_object = {
       $text:{$search:req.query.name},
       category: req.query.category,
-      size: req.query.size
+      size: req.query.size,
+      quantity: { $gt:-100}
     };
   } else{
     query_object = {
       category: req.query.category,
-      size: req.query.size
+      size: req.query.size,
+      quantity: { $gt:-100}
     };
   }
   // now remove any undefined values from query so it will succeed
