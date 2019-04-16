@@ -96,12 +96,14 @@ var search = function (str, query) {
 /**
  * Helper function to add logs to transactions. MODIFIES input transaction
  * @param transaction - transaction object from mongoose
- * @param user_req - user object retrieved from the request body
+ * @param req - http request object
  * @param description - action description
  * @param callback- function with arguments: err- error encountered, transaction - updated transaction
  */
-function addLogToTransaction(transaction, user_req, description, callback) {
-  User.findById(user_req._id,function (err, user) {
+function addLogToTransaction(transaction, req, description, callback) {
+  const user_id = req.headers['user-id'];
+  if (!user_id) return callback({'error':'did not find a user-id header'},null);
+  User.findById(user_id,function (err, user) {
     if(err) callback(err,null);
     if(!user) callback(404,null);
     Action.create(
@@ -173,7 +175,7 @@ router.put('/:id/description', function(req,res) {
      transaction.description = req.body.description;
      // create log of this action
      addLogToTransaction(transaction,
-         req.body.user,
+         req,
          "Updated Transaction",
          function (err, new_transaction) {
        if(err){
@@ -240,7 +242,7 @@ router.put('/:id/complete', function(req,res) {
       }
       // log this action
     let description = req.body.complete ? 'Completed Transaction' : 'Reopened Transaction';
-    addLogToTransaction(transaction, req.body.user,description, function (err, logged_transaction) {
+    addLogToTransaction(transaction, req,description, function (err, logged_transaction) {
       if(err){
         if(err == 404){
           return res.status(404).send('No User found');
@@ -277,7 +279,7 @@ router.put('/:id/mark_paid',function (req,res) {
     }
     // log this action
     let description = req.body.is_paid ? 'Marked Transaction paid' : 'Marked Transaction as waiting';
-    addLogToTransaction(transaction,req.body.user,description,function (err, logged_transaction) {
+    addLogToTransaction(transaction,req,description,function (err, logged_transaction) {
       if (err) {
         if (err === 404) {
           return res.status(404).send("User not found");
@@ -299,7 +301,7 @@ router.put('/:id/mark_paid',function (req,res) {
  * @param completed - if repair is complete or not
  * @param user - user object making this change
  */
-router.put('/:id/update_repair/', function (req,res) {
+router.put('/:id/update_repair', function (req,res) {
   Transaction.findById(req.params.id, function (err,transaction) {
     if (err) return res.status(500).send(err);
     if(!transaction) return res.status(404).send();
@@ -310,7 +312,7 @@ router.put('/:id/update_repair/', function (req,res) {
         if( current_repair.repair._id == req.body._id){
             transaction.repairs[idx].completed = req.body.completed;
             let description = req.body.completed ? `Completed Repair ${current_repair.repair.name}` : `Opened Repair ${current_repair.repair.name}`;
-            addLogToTransaction(transaction,req.body.user,description,function (err,logged_transaction) {
+            addLogToTransaction(transaction,req,description,function (err,logged_transaction) {
               if (err) {
                 if (err == 404) {
                   return res.status(404).send('No user found');
@@ -493,7 +495,7 @@ router.post('/:id/items', function (req, res) {
       transaction.items.push(item);
       transaction.total_cost += item.price;
       // log this action
-      addLogToTransaction(transaction, req.body.user, `Added Item ${item.name}`, function (err, logged_transaction) {
+      addLogToTransaction(transaction, req, `Added Item ${item.name}`, function (err, logged_transaction) {
         if (err) {
           if (err == 404) {
             return res.status(404).send();
@@ -528,7 +530,7 @@ router.delete('/:id/items/:item_id', function (req, res) {
         break;
       }
     }
-    addLogToTransaction(transaction,req.body.user,description,function (err,logged_transaction) {
+    addLogToTransaction(transaction,req,description,function (err,logged_transaction) {
       if(err){
         if(err === 404){
           return res.status(404).send('No User found');
@@ -560,7 +562,7 @@ router.post('/:id/repairs', function (req, res) {
       var rep = {"repair": repair, "completed": false};
       transaction.repairs.push(rep);
       transaction.total_cost += repair.price;
-      addLogToTransaction(transaction,req.body.user,`Added repair ${repair.name}`,function (err, logged_transaction) {
+      addLogToTransaction(transaction,req,`Added repair ${repair.name}`,function (err, logged_transaction) {
         if(err){
           if(err ===404){
             return res.status(404).send('No user found');
@@ -594,7 +596,7 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
         return false;
       } else return true;
     });
-    addLogToTransaction(transaction,req.body.user,description, function (err, logged_transaction) {
+    addLogToTransaction(transaction,req,description, function (err, logged_transaction) {
       if(err){
           if(err ===404){
             return res.status(404).send('No user found');
