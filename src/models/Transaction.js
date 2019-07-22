@@ -16,6 +16,7 @@ var TransactionSchema = new mongoose.Schema({
   refurb: {type:Boolean, default:false},
   waiting_part: {type: Boolean, default: false},
   waiting_email: {type: Boolean, default: false},
+  urgent : {type : Boolean, default: false},
   total_cost: {type: Number, default: 0},
   customer: {type: mongoose.Schema.Types.ObjectId, ref: 'Customer'},
   bikes: [{type: mongoose.Schema.Types.ObjectId, ref: 'Bike'}],
