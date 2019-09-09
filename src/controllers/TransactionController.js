@@ -408,6 +408,7 @@ router.put('/:id', function (req, res) {
         //res.status(200).send('OK');
       });
     }
+    console.log(transaction);
     transaction = _.extend(transaction, req.body);
     transaction.save(function (err, transaction_new) {
       if (err) return res.status(500).send(err);
