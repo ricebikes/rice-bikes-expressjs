@@ -102,7 +102,7 @@ var search = function (str, query) {
  */
 function addLogToTransaction(transaction, req, description, callback) {
   const user_id = req.headers['user-id'];
-  if (!user_id) return callback({'error':'did not find a user-id header'},null);
+  if (!user_id) return callback({error:'did not find a user-id header'},null);
   User.findById(user_id,function (err, user) {
     if(err) callback(err,null);
     if(!user) callback(404,null);
@@ -165,8 +165,8 @@ Functions to update transactions. Split up to allow tracking user actions.
  */
 /**
   Updates a transaction's description
+  requires user's ID in header
   @param description - description to update transaction with
-  @param user - user object of employee performing this action
  */
 router.put('/:id/description', function(req,res) {
   Transaction.findById(req.params.id, function(err, transaction) {
@@ -197,8 +197,8 @@ router.put('/:id/description', function(req,res) {
 
 /**
  * Completes or reopens a transaction
+ * Requires user's ID in header
  * @param complete {boolean} - if the transaction is complete or not
- * @param user - user object of employee performing this change
  */
 router.put('/:id/complete', function(req,res) {
   Transaction.findById(req.params.id, function(err, transaction) {
@@ -261,8 +261,8 @@ router.put('/:id/complete', function(req,res) {
 
 /**
  * Marks a transaction as paid. Also clears waiting on part or email flags.
+ * Requires user's ID in header
  * @param is_paid - if the transaction is being marked as paid or not
- * @param user - user object making this change
  */
 router.put('/:id/mark_paid',function (req,res) {
   Transaction.findById(req.params.id, function (err,transaction) {
@@ -297,9 +297,9 @@ router.put('/:id/mark_paid',function (req,res) {
 
 /**
  * Marks a transaction's repair as complete or unfinished (only one repair is marked at once)
+ * Requires user's ID in header
  * @param _id - repair id to update
  * @param completed - if repair is complete or not
- * @param user - user object making this change
  */
 router.put('/:id/update_repair', function (req,res) {
   Transaction.findById(req.params.id, function (err,transaction) {
@@ -482,8 +482,8 @@ router.delete('/:id/bikes/:bike_id', function (req, res) {
 
 /**
 Adds an existing item to the transaction - "POST /transactions/items"
+ Requires user's ID in header
  @param _id: id of item to add
- @param user: user object making this change
  */
 router.post('/:id/items', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
@@ -514,8 +514,8 @@ router.post('/:id/items', function (req, res) {
 
 
 /**
+ * Requires user's ID in header
  * Deletes an item from a transaction - DELETE /transactions/$id/items
- * @param user - user object making this change
  */
 router.delete('/:id/items/:item_id', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
@@ -581,8 +581,8 @@ router.post('/:id/repairs', function (req, res) {
 
 
 /**
+ * Requires user ID in header
  * Deletes repair from transaction
- * @param user - user object making this change
  */
 router.delete('/:id/repairs/:repair_id', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
