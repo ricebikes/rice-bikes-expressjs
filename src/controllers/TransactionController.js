@@ -106,16 +106,13 @@ function addLogToTransaction(transaction, req, description, callback) {
   User.findById(user_id,function (err, user) {
     if(err) callback(err,null);
     if(!user) callback(404,null);
-    Action.create(
-        {
-          employee: user,
-          description: description,
-          time: Date.now()
-        }, function (err, created_action) {
-          if (err) callback(err,null);
-          transaction.actions.push(created_action);
-          callback(null,transaction);
-        });
+    let action = {
+          "employee": user,
+          "description": description,
+          "time": Date.now()
+    };
+    transaction.actions.push(action);
+    callback(null,transaction);
   });
 }
 
@@ -635,14 +632,12 @@ router.get('/:id/email-receipt', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
     if (err) return res.status(500);
     if (!transaction) return res.status(404);
-    console.log('about to mail!');
     res.mailer.send('email-receipt', {
       to: transaction.customer.email,
       subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
       transaction: transaction
     }, function (err) {
       if (err) return res.status(500);
-      console.log("sent that mail!");
       res.status(200).send('OK');
     })
   });
