@@ -173,7 +173,7 @@ router.put('/:id/description', function(req,res) {
      // create log of this action
      addLogToTransaction(transaction,
          req,
-         "Updated Transaction",
+         "Updated Transaction Description",
          function (err, new_transaction) {
        if(err){
          if(err == 404){
@@ -306,7 +306,7 @@ router.put('/:id/update_repair', function (req,res) {
     if (transaction.repairs.length === 0) return res.status(404).send('No repairs associated with this transaction');
       transaction.repairs.forEach(function (current_repair, idx) {
         // iterate to find the repair that is completed
-        if( current_repair.repair._id == req.body._id){
+        if( current_repair._id == req.body._id){
             transaction.repairs[idx].completed = req.body.completed;
             let description = req.body.completed ? `Completed Repair ${current_repair.repair.name}` : `Opened Repair ${current_repair.repair.name}`;
             addLogToTransaction(transaction,req,description,function (err,logged_transaction) {
