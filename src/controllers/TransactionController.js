@@ -36,7 +36,14 @@ router.post('/', function (req, res) {
           },
           function (err, transaction) {
             if (err) return res.status(500);
-            res.status(200).send(transaction);
+            addLogToTransaction(transaction, req, "Created Transaction",
+                function (err, loggedTransaction) {
+                  if (err) return res.status(500);
+                  loggedTransaction.save(function (err, finalTransaction) {
+                    if (err) return res.status(500);
+                    res.status(200).send(finalTransaction);
+                  });
+                });
           }
         );
       });
@@ -54,7 +61,14 @@ router.post('/', function (req, res) {
             customer: customer._id
           }, function (err, transaction) {
             if (err) return res.status(500);
-            res.status(200).send(transaction);
+            addLogToTransaction(transaction, req, "Created Transaction",
+                function (err, loggedTransaction) {
+                  if (err) return res.status(500);
+                  loggedTransaction.save(function (err, finalTransaction) {
+                    if (err) return res.status(500);
+                    res.status(200).send(finalTransaction);
+                  });
+            });
           })
         });
     }
