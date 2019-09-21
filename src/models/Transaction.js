@@ -24,7 +24,7 @@ var TransactionSchema = new mongoose.Schema({
   actions: [{
     employee: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
     description: String,
-    time: Date
+    time: Date,
   }]
 });
 

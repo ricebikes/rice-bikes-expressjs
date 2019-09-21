@@ -14,7 +14,6 @@ var Bike = require('./../models/Bike');
 var Item = require('./../models/Item');
 var Repair = require('./../models/Repair');
 var User = require('./../models/User');
-var Action = require('./../models/Action');
 var _ = require('underscore');
 
 router.use(bodyParser.json());
@@ -125,7 +124,7 @@ function addLogToTransaction(transaction, req, description, callback) {
           "description": description,
           "time": Date.now()
     };
-    transaction.actions.push(action);
+    transaction.actions.unshift(action);
     callback(null,transaction);
   });
 }
