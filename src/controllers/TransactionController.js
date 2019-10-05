@@ -508,22 +508,41 @@ router.post('/:id/items', function (req, res) {
     Item.findById(req.body._id, function (err, item) {
       if (err) return res.status(500);
       if (!item) return res.status(404);
-      transaction.items.push(item);
-      transaction.total_cost += item.price;
-      // log this action
-      addLogToTransaction(transaction, req, `Added Item ${item.name}`, function (err, logged_transaction) {
-        if (err) {
-          if (err == 404) {
-            return res.status(404).send();
-          } else {
-            return res.status(500).send();
-          }
-        }
-        logged_transaction.save(function (err, new_transaction) {
+      // check if the customer is an employee
+      User.find({},function (err, users) {
           if (err) return res.status(500).send(err);
-          return res.status(200).send(new_transaction);
-        });
+          let employee = false;
+          for (user of users) {
+            if (user.username === transaction.customer.email.replace("@rice.edu","")) {
+              console.log("You're an employee");
+              employee = true;
+              break;
+            }
+          }
+          transaction.items.push(item);
+          if (employee && item.shop_cost && item.shop_cost != 0) {
+            // employee pricing
+            let multiplier_over_wholesale = 1.00;
+            transaction.total_cost += Math.ceil(item.shop_cost * multiplier_over_wholesale);
+          } else {
+              transaction.total_cost += item.price;
+          }
+          // log this action
+          addLogToTransaction(transaction, req, `Added Item ${item.name}`, function (err, logged_transaction) {
+              if (err) {
+                  if (err == 404) {
+                      return res.status(404).send();
+                  } else {
+                      return res.status(500).send();
+                  }
+              }
+              logged_transaction.save(function (err, new_transaction) {
+                  if (err) return res.status(500).send(err);
+                  return res.status(200).send(new_transaction);
+              });
+          });
       });
+
     });
   });
 });
