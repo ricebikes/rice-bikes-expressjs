@@ -182,25 +182,31 @@ router.put('/:id/description', function(req,res) {
   Transaction.findById(req.params.id, function(err, transaction) {
      if (err) return res.status(500).send(err);
      if (!transaction) return res.status(404).send();
-     transaction.description = req.body.description;
-     // create log of this action
-     addLogToTransaction(transaction,
-         req,
-         "Updated Transaction Description",
-         function (err, new_transaction) {
-       if(err){
-         if(err == 404){
-           return res.status(404).send();
-         }else{
-           return res.status(500).send(err);
-         }
-       }
-       // save transaction
-       new_transaction.save(function (err, final_transaction) {
-         if (err) return res.status(500).send(err);
-         res.status(200).send(final_transaction);
-       })
+     let user_id = req.headers["user-id"];
+     User.findById(user_id,function (err, user) {
+       if (err) return res.status(500).send(err);
+       if (!user) return res.status(404).send("No user found!");
+       transaction.description = req.body.description + "- " + user.firstname + " " + user.lastname;
+         // create log of this action
+      addLogToTransaction(transaction,
+          req,
+          "Updated Transaction Description",
+          function (err, new_transaction) {
+        if(err){
+          if(err == 404){
+            return res.status(404).send();
+          }else{
+            return res.status(500).send(err);
+          }
+        }
+        // save transaction
+        new_transaction.save(function (err, final_transaction) {
+          if (err) return res.status(500).send(err);
+          res.status(200).send(final_transaction);
+        })
+      });
      });
+
   }
   );
 });
