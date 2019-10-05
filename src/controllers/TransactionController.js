@@ -384,17 +384,8 @@ router.put('/:id', function (req, res) {
           }
           found_item.save(function (err, new_item) {
             if (err) return res.status(500).send(err);
-              if (!transaction.is_paid && req.body.is_paid) {
-                res.mailer.send('email-receipt', {
-                to: transaction.customer.email,
-                subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
-                transaction: transaction,
-                date: date
-              }, function (err) {
-                if (err) return res.status(500);
-              });
-            }
-          });
+
+          })
         });
       }
     }
@@ -447,6 +438,7 @@ router.delete('/:id', function (req, res) {
   })
 });
 
+
 /*
 Posts a bike to a transaction - "POST /transactions/:id/bikes"
  */
@@ -496,7 +488,7 @@ router.delete('/:id/bikes/:bike_id', function (req, res) {
 });
 
 
-/**
+/*
 Adds an existing item to the transaction - "POST /transactions/items"
  Requires user's ID in header
  @param _id: id of item to add
@@ -599,10 +591,8 @@ router.delete('/:id/items/:item_id', function (req, res) {
 });
 
 
-/**
+/*
  Adds an existing repair to the transaction - "POST /transactions/repairs"
- @ param _id : repair id to add
- @ param user : user object performing this change
  */
 router.post('/:id/repairs', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
@@ -614,18 +604,8 @@ router.post('/:id/repairs', function (req, res) {
       var rep = {"repair": repair, "completed": false};
       transaction.repairs.push(rep);
       transaction.total_cost += repair.price;
-      addLogToTransaction(transaction,req,`Added repair ${repair.name}`,function (err, logged_transaction) {
-        if(err){
-          if(err ===404){
-            return res.status(404).send('No user found');
-          }else{
-            return res.status(500).send(err);
-          }
-        }
-        logged_transaction.save(function (err, new_transaction) {
-          if(err) return res.status(500).send(err);
-          return res.status(200).send(new_transaction);
-        })
+      transaction.save(function (err, transaction) {
+        res.status(200).send(transaction);
       });
     })
   })
@@ -640,28 +620,17 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
     if (err) return res.status(500);
     if (!transaction) return res.status(404);
-    let description = '';
     transaction.repairs = transaction.repairs.filter(function (rep) {
       if (rep._id == req.params.repair_id) {
-        description = `Deleted repair ${rep.repair.name}`;
         transaction.total_cost -= rep.repair.price;
         return false;
       } else return true;
     });
-    addLogToTransaction(transaction,req,description, function (err, logged_transaction) {
-      if(err){
-          if(err ===404){
-            return res.status(404).send('No user found');
-          }else{
-            return res.status(500).send(err);
-          }
-        }
-        logged_transaction.save(function (err, new_transaction) {
-          if(err) return res.status(500).send(err);
-          return res.status(200).send(new_transaction);
-        });
+
+    transaction.save(function (err, transaction) {
+      res.status(200).send(transaction);
     });
-  });
+  })
 });
 
 /*
