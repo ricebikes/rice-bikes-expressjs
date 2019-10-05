@@ -522,7 +522,7 @@ router.post('/:id/items', function (req, res) {
           transaction.items.push(item);
           if (employee && item.shop_cost && item.shop_cost != 0) {
             // employee pricing
-            let multiplier_over_wholesale = 1.00;
+            let multiplier_over_wholesale = 1.17;
             transaction.total_cost += Math.ceil(item.shop_cost * multiplier_over_wholesale);
           } else {
               transaction.total_cost += item.price;
@@ -556,28 +556,45 @@ router.delete('/:id/items/:item_id', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
     if (err) return res.status(500);
     if (!transaction) return res.status(404);
-    for (let i = 0; i < transaction.items.length; i++) {
-      let item = transaction.items[i];
-      if (item._id == req.params.item_id) {
-        transaction.total_cost -= item.price;
-        transaction.items.splice(i, 1);
-        var description = `Deleted item ${item.name}`;
-        break;
-      }
-    }
-    addLogToTransaction(transaction,req,description,function (err,logged_transaction) {
-      if(err){
-        if(err === 404){
-          return res.status(404).send('No User found');
-        }else{
-          return res.status(500).send(err);
+    User.find({},function (err, users) {
+        if (err) return res.status(500).send(err);
+        let employee = false;
+        for (user of users) {
+            if (user.username === transaction.customer.email.replace("@rice.edu", "")) {
+                console.log("You're an employee");
+                employee = true;
+                break;
+            }
         }
-      }
-      logged_transaction.save(function (err, new_transaction) {
-        if(err) return res.status(500).send();
-        return res.status(200).send(new_transaction);
-      });
+        for (let i = 0; i < transaction.items.length; i++) {
+            let item = transaction.items[i];
+            if (item._id == req.params.item_id) {
+                if (employee && item.shop_cost && item.shop_cost != 0) {
+                    let multiplier_over_wholesale = 1.17;
+                    transaction.total_cost -= Math.ceil(item.shop_cost * multiplier_over_wholesale);
+                } else {
+                    transaction.total_cost -= item.price;
+                }
+                transaction.items.splice(i, 1);
+                var description = `Deleted item ${item.name}`;
+                break;
+            }
+        }
+        addLogToTransaction(transaction, req, description, function (err, logged_transaction) {
+            if (err) {
+                if (err === 404) {
+                    return res.status(404).send('No User found');
+                } else {
+                    return res.status(500).send(err);
+                }
+            }
+            logged_transaction.save(function (err, new_transaction) {
+                if (err) return res.status(500).send();
+                return res.status(200).send(new_transaction);
+            });
+        });
     });
+
   })
 });
 
