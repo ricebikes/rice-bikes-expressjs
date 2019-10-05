@@ -293,6 +293,7 @@ router.put('/:id/mark_paid',function (req,res) {
         if (err) return res.status(500);
       });
     }
+    transaction.is_paid = req.body.is_paid;
     // log this action
     let description = req.body.is_paid ? 'Marked Transaction paid' : 'Marked Transaction as waiting';
     addLogToTransaction(transaction,req,description,function (err, logged_transaction) {
