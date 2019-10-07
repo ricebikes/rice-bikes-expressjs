@@ -221,6 +221,7 @@ router.put('/:id/complete', function(req,res) {
     if(err) return res.status(500).send(err);
     if(!transaction) return res.status(404).send();
     transaction.complete = req.body.complete;
+    transaction.urgent = false;
     if(req.body.complete) {
       transaction.date_completed = Date.now();
     }
@@ -294,6 +295,7 @@ router.put('/:id/mark_paid',function (req,res) {
       });
     }
     transaction.is_paid = req.body.is_paid;
+    transaction.complete = true;
     // log this action
     let description = req.body.is_paid ? 'Marked Transaction paid' : 'Marked Transaction as waiting';
     addLogToTransaction(transaction,req,description,function (err, logged_transaction) {
