@@ -22,8 +22,12 @@ var TransactionSchema = new mongoose.Schema({
   customer: {type: mongoose.Schema.Types.ObjectId, ref: 'Customer'},
   bikes: [{type: mongoose.Schema.Types.ObjectId, ref: 'Bike'}],
   repairs: [{repair: {type: mongoose.Schema.Types.ObjectId, ref: 'Repair'}, completed: Boolean}],
-  items: [{type: mongoose.Schema.Types.ObjectId, ref: 'Item'}]
-
+  items: [{type: mongoose.Schema.Types.ObjectId, ref: 'Item'}],
+  actions: [{
+    employee: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
+    description: String,
+    time: Date,
+  }]
 });
 
 // function which populates references with real data and updates values.
@@ -32,6 +36,8 @@ var autoPopulate = function (next) {
   this.populate('bikes');
   this.populate('repairs.repair');
   this.populate('items');
+  // need to populate user ref of actions
+  this.populate('actions.employee');
   next();
 };
 

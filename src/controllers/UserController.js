@@ -10,25 +10,13 @@ var adminMiddleware = require('../middleware/AdminMiddleware');
 
 router.use(bodyParser.json());
 router.use(authMiddleware);
-router.use(adminMiddleware);
-
-// add middleware function to prevent non-admins from using this page
 
 
-var checkIfAdmin = function (req, res, next) {
-  User.findOne({username: req.userData.username}, function (err, user) {
-    if (err) return res.status(500).send();
-    if (!user) return res.status(404).send();
-    if (!user.admin) {
-      return res.status(401).send();
-    }
-    next();
-  });
-};
 
 /*
 Create a user.
  */
+router.post('/',adminMiddleware);
 router.post('/', function (req, res) {
     User.create({username: req.body.username, roles:req.body.roles}, function (err, newUser) {
       if (err) res.status(500);
@@ -39,6 +27,7 @@ router.post('/', function (req, res) {
 /*
 Gets all users - "GET /user"
  */
+// NOTE: this function does not use admin middleware. It is not protected and any user can access this endpoint
 router.get('/', function (req, res) {
   User.find({}, function (err, users) {
     if (err)
@@ -50,6 +39,7 @@ router.get('/', function (req, res) {
 /*
 Delete a user.
  */
+router.delete('/:user_id',adminMiddleware);
 router.delete('/:user_id', function (req, res) {
     User.findById(req.params.user_id, function (err, user) {
       if (err) res.status(500).send();
