@@ -92,6 +92,37 @@ var search = function (str, query) {
   }
 };
 
+/*
+Searches transactions by date they were completed
+ */
+router.get('/searchByDate/:dates', function (req, res) {
+  const datesMap = req.params.dates; //a dictionary from startDate/endDate to ISO string
+  var queryParams = {};
+  try {
+    queryParams.$gte = new Date(datesMap["startDate"]);
+  }
+  catch (e) {
+    console.log("No start date. Continue");
+  }
+  try {
+    queryParams.$lt = new Date(datesMap["endDate"]);
+  }
+  catch (e) {
+    console.log("No start date. Continue");
+  }
+  if (startDate == null && endDate == null){ return [];}
+
+  Transaction.find({
+    'date_completed': queryParams
+
+  }).exec(function (err, transactions) {
+    if (err) return res.status(500);
+    if (!transactions) return res.status(404).send("No transactions found.");
+    res.status(200).send(transaction);
+  });
+
+
+});
 
 /*
  Searches for transactions by customer XOR bike XOR transaction description - "GET /transactions/search?customer="
@@ -167,6 +198,7 @@ router.put('/:id', function (req, res) {
             })
           }
           found_item.save(function (err, new_item) {
+            console.log(new_item);
             if (err) return res.status(500).send(err);
 
           })
@@ -199,6 +231,7 @@ router.put('/:id', function (req, res) {
         //res.status(200).send('OK');
       });
     }
+    console.log(transaction);
     transaction = _.extend(transaction, req.body);
     transaction.save(function (err, transaction_new) {
       if (err) return res.status(500).send(err);

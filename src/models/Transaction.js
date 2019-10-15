@@ -15,6 +15,7 @@ var TransactionSchema = new mongoose.Schema({
   is_paid: {type: Boolean, default: false},
     refurb: {type:Boolean, default:false},
   waiting_part: {type: Boolean, default: false},
+  paymentType: {type: [String], default: []},
   waiting_email: {type: Boolean, default: false},
   urgent : {type : Boolean, default: false},
   total_cost: {type: Number, default: 0},
@@ -22,6 +23,7 @@ var TransactionSchema = new mongoose.Schema({
   bikes: [{type: mongoose.Schema.Types.ObjectId, ref: 'Bike'}],
   repairs: [{repair: {type: mongoose.Schema.Types.ObjectId, ref: 'Repair'}, completed: Boolean}],
   items: [{type: mongoose.Schema.Types.ObjectId, ref: 'Item'}]
+
 });
 
 // function which populates references with real data and updates values.
