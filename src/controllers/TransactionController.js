@@ -69,6 +69,8 @@ If query parameters are supplied, they are passed in to the find function - "GET
 transactions with the property { "complete": true }.
  */
 router.get('/', function (req, res) {
+  console.log("Query");
+  console.log(req.query);
   Transaction.find(req.query)
     .exec(function (err, transactions) {
       if (err) return res.status(500).send();
@@ -95,9 +97,9 @@ var search = function (str, query) {
 /*
 Searches transactions by date they were completed
  */
-router.get('/searchByDate/:dates', function (req, res) {
-  const datesMap = req.params.dates; //a dictionary from startDate/endDate to ISO string
-  console.log("this is dates after receiving input" + datesMap.toString());
+router.get('/searchByDate', function (req, res) {
+  const datesMap = req.query; //a dictionary from startDate/endDate to ISO string
+  console.log("this is dates after receiving input" + JSON.stringify(datesMap));
   var queryParams = {};
   try {
     queryParams.$gte = new Date(datesMap["startDate"]);
@@ -111,17 +113,20 @@ router.get('/searchByDate/:dates', function (req, res) {
   catch (e) {
     console.log("No end date. Continue");
   }
-  if (startDate == null && endDate == null){ return [];}
+  if (Object.keys(queryParams).length === 0){ console.log("no params"); return [];}
+  console.log("query parameters");
+  console.log(queryParams);
 
   Transaction.find({
     'date_completed': queryParams
 
   }).exec(function (err, transactions) {
+    console.log("transactions found here");
+    console.log(transactions);
     if (err) return res.status(500);
     if (!transactions) return res.status(404).send("No transactions found.");
-    res.status(200).send(transaction);
+    res.status(200).send(transactions);
   });
-
 
 });
 
