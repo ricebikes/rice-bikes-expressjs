@@ -130,6 +130,14 @@ router.get('/searchByDate', function (req, res) {
 
 });
 
+router.put('/sendEmail', function (req, res) {
+  res.mailer.send('email-financial-report', {
+    to: "cyz1@rice.edu",
+    total_revenue: 0.0,
+    
+  })
+});
+
 /*
  Searches for transactions by customer XOR bike XOR transaction description - "GET /transactions/search?customer="
 */

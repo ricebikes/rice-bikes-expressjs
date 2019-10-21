@@ -1,0 +1,26 @@
+doctype html
+html
+    head
+        meta(http-equiv='Content-Type', content='text/html; charset=UTF-8')
+        link(rel='stylesheet', href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css')
+        title Financial Report: This week in Rice Bikes
+        body
+            p Here is the financial report for the last week:,
+
+            br
+
+            h3 Total revenue: #{total_revenue}
+
+            | Daily Summary
+            each day in all_days
+                h4 #{day.name}:
+                ul
+                    li Total Revenue: #{day.card + day.cash + day.check}
+                    li Total Card Revenue: #{day.card}
+                    li Total Cash Revenue: #{day.cash}
+                    li Total Check Revenue: #{day.card}
+
+            p Best,
+            p The Rice Bikes WebApp
+
+
