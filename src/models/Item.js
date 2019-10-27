@@ -1,17 +1,19 @@
 var mongoose = require('mongoose');
 
 var ItemSchema = new mongoose.Schema({
-  supplier: String,
-  upc : Number,
-  category: String,
-  name: {type:String,required:true},
-  description: String,
-  standard_price: {type:Number,required:true},
-  wholesale_cost:Number,
-  stock:{type:Number,default:0},
+    supplier: String,
+    upc: Number,
+    category: String,
+    description: {type: String, required: true},
+    standard_price: {type: Number, required: true},
+    wholesale_cost: Number,
+    hidden: {type: Boolean, default: false},
+    stock: {type: Number, default: 0},
 });
 // text index lets us search by name
-ItemSchema.index({name:'text'});
+ItemSchema.index({description: 'text'});
+ItemSchema.index({upc: 1});
+ItemSchema.index({category: 1});
 mongoose.model('Item', ItemSchema);
 
 module.exports = mongoose.model('Item');
