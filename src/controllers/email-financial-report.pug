@@ -13,12 +13,12 @@ html
 
             | Daily Summary
             each day in all_days
-                h4 #{day.name}:
+                h4 #{day}, #{day.date}:
                 ul
                     li Total Revenue: #{day.card + day.cash + day.check}
                     li Total Card Revenue: #{day.card}
                     li Total Cash Revenue: #{day.cash}
-                    li Total Check Revenue: #{day.card}
+                    li Total Check Revenue: #{day.check}
 
             p Best,
             p The Rice Bikes WebApp

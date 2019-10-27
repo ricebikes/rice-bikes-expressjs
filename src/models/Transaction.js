@@ -11,6 +11,7 @@ var TransactionSchema = new mongoose.Schema({
   transaction_type: String,
   date_created: Date,
   date_completed: Date,
+  date_paid: Date,
   complete: {type: Boolean, default: false},
   is_paid: {type: Boolean, default: false},
     refurb: {type:Boolean, default:false},
