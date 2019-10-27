@@ -13,16 +13,15 @@ var TransactionSchema = new mongoose.Schema({
   date_completed: Date,
   complete: {type: Boolean, default: false},
   is_paid: {type: Boolean, default: false},
-    refurb: {type:Boolean, default:false},
+  refurb: {type:Boolean, default:false},
   waiting_part: {type: Boolean, default: false},
   paymentType: {type: [String], default: []},
   waiting_email: {type: Boolean, default: false},
   urgent : {type : Boolean, default: false},
-  total_cost: {type: Number, default: 0},
   customer: {type: mongoose.Schema.Types.ObjectId, ref: 'Customer'},
   bikes: [{type: mongoose.Schema.Types.ObjectId, ref: 'Bike'}],
   repairs: [{repair: {type: mongoose.Schema.Types.ObjectId, ref: 'Repair'}, completed: Boolean}],
-  items: [{type: mongoose.Schema.Types.ObjectId, ref: 'Item'}],
+  items: [{item : {type: mongoose.Schema.Types.ObjectId, ref: 'Item'}, price: Number}],
   actions: [{
     employee: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
     description: String,
@@ -35,7 +34,7 @@ var autoPopulate = function (next) {
   this.populate('customer');
   this.populate('bikes');
   this.populate('repairs.repair');
-  this.populate('items');
+  this.populate('items.item');
   // need to populate user ref of actions
   this.populate('actions.employee');
   next();

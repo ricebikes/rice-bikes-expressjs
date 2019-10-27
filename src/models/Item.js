@@ -5,8 +5,8 @@ var ItemSchema = new mongoose.Schema({
   size: String,
   name: {type:String,required:true},
   description: String,
-  price: {type:Number,required:true},
-  shop_cost:Number,
+  standard_price: {type:Number,required:true},
+  wholesale_cost:Number,
   quantity:{type:Number,default:0},
   warning_quantity:Number
 });
