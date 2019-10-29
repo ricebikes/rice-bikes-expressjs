@@ -9,10 +9,10 @@ let CONFIG = function() {
       CASthisServiceURL: 'https://ricebikes.ml/auth',
       frontendURL: 'https://ricebikes.ml',
       email: {
-        user: 't4jves3pwjtt2svq@ethereal.email',
-        pass: 'mPsJ9XKegskYgEaqZr',
-        host: 'smtp.ethereal.email',
-        port: 587
+        user: 'rbikesfinancial@gmail.com',
+        pass: 'ricebikes2020',
+        host: 'smtp.gmail.com',
+        port: 465
       }
     }
   } else {
@@ -23,9 +23,9 @@ let CONFIG = function() {
       CASthisServiceURL: 'http://localhost:4200/auth',
       frontendURL: 'http://localhost:4200',
       email: {
-        user: 't4jves3pwjtt2svq@ethereal.email',
-        pass: 'mPsJ9XKegskYgEaqZr',
-        host: 'smtp.ethereal.email',
+        user: 'rbikesfinancial@gmail.com',
+        pass: 'ricebikes2020',
+        host: 'smtp.gmail.com',
         port: 587
       }
     }

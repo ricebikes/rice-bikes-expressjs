@@ -136,7 +136,7 @@ router.get('/searchByDate', function (req, res) {
 
 router.put('/sendEmail', function (req, res) {
   //var queryParams = dateParams(req, res);
-  console.log(req.query);
+
   // Transaction.find({
   //   'date_paid': queryParams
   // }).exec(function (err, transactions) {
@@ -145,11 +145,21 @@ router.put('/sendEmail', function (req, res) {
   //   if (err) return res.status(500);
   //   if (!transactions) return res.status(404).send("No transactions found.");
   //   //for
-  //   res.mailer.send('email-financial-report', {
-  //     to: "cyz1@rice.edu",
-  //     total_revenue: 0.0,
-  //     all_days: [{"name": "Monday", "cash": 0, "card": 0, "check": 0}]
-  //   });
+  console.log("reached sendemail");
+  console.log({
+    to: "cyz1@rice.edu",
+    total_revenue: req.query.total_cost,
+    all_days: req.body
+  });
+    res.mailer.send('email-financial-report', {
+      to: "cyz1@rice.edu",
+      subject: "Weekly Financial Report",
+      total_revenue: req.query.total_cost,
+      all_days: req.body
+    }, function (err) {
+      if(err) console.log(err);
+    });
+    res.status(200).send("Ok!")
   // });
 
 });

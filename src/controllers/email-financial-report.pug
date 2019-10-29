@@ -5,20 +5,19 @@ html
         link(rel='stylesheet', href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css')
         title Financial Report: This week in Rice Bikes
         body
-            p Here is the financial report for the last week:,
+            p Here is the financial report for the past week:,
 
-            br
-
-            h3 Total revenue: #{total_revenue}
+            h2 Total weekly revenue: $#{total_revenue}
 
             | Daily Summary
-            each day in all_days
-                h4 #{day}, #{day.date}:
+            //{"Sunday": {"date": "No transactions today","cash": 0, "card": 0, "check": 0}}
+            each info, day in all_days
+                h3 #{day}, #{info.date}:
+                h4 Daily Revenue: $#{info.card + info.cash + info.check}
                 ul
-                    li Total Revenue: #{day.card + day.cash + day.check}
-                    li Total Card Revenue: #{day.card}
-                    li Total Cash Revenue: #{day.cash}
-                    li Total Check Revenue: #{day.check}
+                    li Total Card Revenue: $#{info.card}
+                    li Total Cash Revenue: $#{info.cash}
+                    li Total Check Revenue: $#{info.check}
 
             p Best,
             p The Rice Bikes WebApp
