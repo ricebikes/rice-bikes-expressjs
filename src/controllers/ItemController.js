@@ -32,8 +32,18 @@ router.get('/sizes', function (req, res) {
  */
 router.get('/search', function (req, res) {
     // filter out null fields before piping this query to mongo
-
-    req.query;// switch to see if our query defines a name
+    let mongo_query = {};
+    if (req.query.description) {
+        mongo_query = {$text: {$search: req.query.description}};
+    }
+    if (req.query.category) {
+        mongo_query.category = req.query.category;
+    }
+    if (req.query.upc) {
+        mongo_query.upc = req.query.upc;
+    }
+    console.log(mongo_query);
+    // switch to see if our query defines a name
     // TODO: raise the quantity to zero once inventory is managed correctly
     if (req.query.name) {
         query_object = {
