@@ -12,6 +12,7 @@ var TransactionController = require('./controllers/TransactionController');
 var RepairController = require('./controllers/RepairController');
 var ItemController = require('./controllers/ItemController');
 var CustomerController = require('./controllers/CustomerController');
+let OrderController = require('./controllers/OrderController');
 
 /* Create app */
 var app = express();
@@ -46,5 +47,6 @@ app.use('/api/transactions', TransactionController);
 app.use('/api/items', ItemController);
 app.use('/api/repairs', RepairController);
 app.use('/api/customers', CustomerController);
+app.use('/api/orders',OrderController);
 
 module.exports = app;

@@ -4,6 +4,9 @@ let express = require('express');
 let router = express.Router();
 let authMiddleware = require('../middleware/AuthMiddleware');
 let Order = require('./../models/Order');
+let bodyParser = require('body-parser');
+let adminMiddleware = require('../middleware/AdminMiddleware');
+let Item = require('./../models/Item');
 
 router.use(bodyParser.json());
 router.use(authMiddleware);
@@ -14,17 +17,19 @@ router.use(authMiddleware);
  */
 router.get('/daterange',function (req,res) {
     // set start and end, or use default values if they were not given.
-   let start = req.query.start === undefined ? 0 : req.query.start;
-   let end = req.query.end === undefined ? 0 : req.query.end;
+
+   let start = isNaN(parseInt(req.query.start)) ? 0 : parseInt(req.query.start);
+   let end = isNaN(parseInt(req.query.end)) ? 0 : parseInt(req.query.end);
    Order.find(
-   {$and:
-       [ {date_created: { $gt: new Date(start) }},
-           {date_created: {$lt: new Date(end)}}]},
+   {date_created: { $gt: new Date(start), $lt: new Date(end)}},
        function (err, orders) {
-           if (err) return res.status(500)
+           if (err) return res.status(500);
            return res.status(200).send(orders);
        });
 });
+
+// require admin permissions to use the below endpoints
+router.use(adminMiddleware);
 
 /**
  * POSTs a new order
@@ -37,13 +42,17 @@ router.post('/',function (req, res) {
     if (!req.body.items) {
         return res.status(400).send("No items provided in request");
     }
-    Order.create({
-        items: req.body.items,
-        date_created: Date.now()
-    }, function (err, order) {
-        if (err) return res.status(500).send(err);
-        return res.status(200).send(order);
+    // map item array to array of objectIds
+    Item.findById(req.body.items[0].item._id, function (err, fItem) {
+        Order.create({
+            items: [{item: fItem}],
+            date_created: Date.now()
+        }, function (err, order) {
+            if (err) return res.status(500).send(err);
+            return res.status(200).send(order);
+        });
     });
+
 });
 
 /**
@@ -61,3 +70,5 @@ router.put('/:id',function (req,res) {
         return res.status(200).send(order);
     })
 });
+
+module.exports = router;
