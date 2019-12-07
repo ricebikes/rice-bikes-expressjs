@@ -1,9 +1,11 @@
 var mongoose = require('mongoose');
 
 var OrderSchema = new mongoose.Schema({
-    date_created: Date,
+    supplier: {type: String, required: true},
+    date_created: {type: Date, required: true},
     tracking_number: Number,
-    items: [{item: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'}, quantity: Number}]
+    items: [{item: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'},
+        quantity: Number, transaction: {type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', required: false}}]
 });
 // auto populate item list when querying orders
 var autoPopulate = function (next) {

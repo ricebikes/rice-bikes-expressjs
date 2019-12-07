@@ -1,7 +1,6 @@
 var mongoose = require('mongoose');
 
 var ItemSchema = new mongoose.Schema({
-    supplier: String,
     upc: Number,
     category: String,
     description: {type: String, required: true},
