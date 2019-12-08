@@ -96,6 +96,27 @@ router.post('/',async (req, res) => {
 });
 
 /**
+ * Updates the stock of an Item asynchronously
+ * used when an order is marked as completed, to increase stock of items in database
+ * @param itemID: ID of Item to update stock of
+ * @param quantity: quantity of item that has been shipped
+ * @return {Promise<void>}
+ */
+async function updateItemStock(itemID, quantity) {
+    // not using try/catch because we want errors to be caught by callers
+    const itemRef = await Item.findById(itemID);
+    if (!itemRef) {
+        // throw error so the frontend knows something went wrong
+        throw {err: "Stock update requested for invalid item"};
+    }
+    itemRef.stock += quantity;
+    const restockedItem = await itemRef.save();
+    if (!restockedItem) {
+        throw {err: "Failed to save new stock state of item"};
+    }
+}
+
+/**
  * PUT / - updates existing order
  * Item array will be overwritten
  * put body:
@@ -112,11 +133,23 @@ router.put('/:id',async (req,res) => {
         if (!order) return res.status(404).send("No order found!");
         // conditionally update each portion of the order, based on if it is present
         if (req.body.tracking_number) {
-            order.tracking_number = req.tracking_number;
+            order.tracking_number = req.body.tracking_number;
         }
         if (req.body.items) {
             const promises = req.body.items.map(resolveItems);
             order.items = await Promise.all(promises);
+        }
+        // update the stock of items in this order if it was just completed
+        if (req.body.status === "Completed" && order.status !== "Completed") {
+            // we will wait for this to complete for error handling (although not strictly necessary otherwise)
+            if (req.body.items) {
+                const promises = req.body.items.map(item => updateItemStock(item.item._id,item.quantity));
+                await Promise.all(promises);
+            } else {
+                // use the items in the database for this order
+                const promises = order.items.map(item => updateItemStock(item.item._id,item.quantity));
+                await Promise.all(promises);
+            }
         }
         if (req.body.status) {
             order.status = req.body.status;
