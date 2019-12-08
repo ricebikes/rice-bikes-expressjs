@@ -10,6 +10,7 @@ var OrderSchema = new mongoose.Schema({
 // auto populate item list when querying orders
 var autoPopulate = function (next) {
     this.populate('items.item');
+    this.populate('items.transaction');
     next();
 };
 

@@ -19,7 +19,7 @@ router.use(authMiddleware);
 router.get('/daterange',function (req,res) {
     // set start and end, or use default values if they were not given.
    let start = isNaN(parseInt(req.query.start)) ? 0 : parseInt(req.query.start);
-   let end = isNaN(parseInt(req.query.end)) ? 0 : parseInt(req.query.end);
+   let end = isNaN(parseInt(req.query.end)) ? Date.now() : parseInt(req.query.end);
    Order.find(
        // require date between two UNIX timestamps
    {date_created: { $gt: new Date(start), $lt: new Date(end)}},
@@ -27,6 +27,13 @@ router.get('/daterange',function (req,res) {
            if (err) return res.status(500);
            return res.status(200).send(orders);
        });
+});
+
+/**
+ * GET: /. Alias to GET /daterange (gets all orders)
+ */
+router.get('/', function (req, res) {
+    res.redirect("/daterange");
 });
 
 // require admin permissions to use the below endpoints
@@ -49,28 +56,33 @@ router.post('/',async (req, res) => {
     }
     try {
         let supplier = req.body.supplier;
-        // for each item populate the reference and any transaction referenced
-        let populatedItems = req.body.items.map(async item => {
-            try {
-                let itemRef = await Item.findById(item._id);
-                if (item.transaction) {
-                    // populate transaction ref
-                    let transactionRef = await Transaction.findById(item.transaction._id);
-                    return {item: itemRef, transaction: transactionRef, quantity: item.quantity};
-                } else {
-                    return {item: itemRef, quantity: item.quantity};
-                }
-            } catch (err) {
-                // bail out and return error
-                res.status(500).send(err);
+        // for each item populate the reference and any transaction referenced. This function will return promises.
+        let itemPromises = req.body.items.map(async item => {
+            let itemRef = await Item.findById(item.item._id);
+            if (!itemRef) {
+                // throw error
+                throw {err: "Item not found!"};
             }
-
+            if (item.transaction) {
+                // populate transaction ref
+                let transactionRef = await Transaction.findById(item.transaction._id);
+                if (!transactionRef) {
+                    // throw error
+                    throw {err: "Transaction was not found"};
+                }
+                return {item: itemRef, transaction: transactionRef, quantity: item.quantity};
+            } else {
+                return {item: itemRef, quantity: item.quantity};
+            }
         });
+        // wait synchronously until all items are populated
+        let populatedItems = await Promise.all(itemPromises);
         // create order using populated item refs
         let newOrder = await Order.create({supplier: supplier, date_created: new Date(), items: populatedItems});
         res.status(200).send(newOrder);
     } catch (err) {
         // push error back to frontend user
+        console.log(err);
         res.status(500).send(err);
     }
 });
