@@ -7,7 +7,10 @@ var adminMiddleware = require('../middleware/AdminMiddleware');
 router.use(bodyParser.json());
 
 
-// allows frontend to dynamically populate dropdown menu of categories
+/**
+ * GET: /categories
+ * Allows frontend to produce a list of distinct item categories for users to select between when searching
+ */
 router.get('/categories', function (req, res) {
     Item.distinct('category', function (err, categories) {
         if (err) return res.status(500).send("Error getting distinct categories!");
@@ -15,54 +18,32 @@ router.get('/categories', function (req, res) {
     })
 });
 
-// allows dynamic population of size parameter in dropdown
-router.get('/sizes', function (req, res) {
-    // note: request must have a category query associated with it
-    Item.distinct('size', {category: req.query.category}, function (err, sizes) {
-        if (err) return res.status(500).send(err);
-        res.status(200).send(sizes);
-    })
-});
-
 /**
  * /search accepts the following parameters:
+ *  name: the name of the item.
  *  description: Item name/ description. Typically will include size, and name
  *  category: Item category
  *  upc: Item Universal Product Code (used items will lack one)
  */
 router.get('/search', function (req, res) {
-    // filter out null fields before piping this query to mongo
-    let mongo_query = {};
-    if (req.query.description) {
-        mongo_query = {$text: {$search: req.query.description}};
-    }
-    if (req.query.category) {
-        mongo_query.category = req.query.category;
-    }
-    if (req.query.upc) {
-        mongo_query.upc = req.query.upc;
-    }
-    console.log(mongo_query);
-    // switch to see if our query defines a name
+    // add all basic query parameters into object
+    let query_object = {
+        description: req.query.description,
+        category: req.query.category,
+        upc: req.query.upc,
+        // explicitly disable showing hidden items
+        hidden: false
+    };
     // TODO: raise the quantity to zero once inventory is managed correctly
+    // if our query defines a name, add that here. Required since the name portion uses indexed searching (for speed)
     if (req.query.name) {
-        query_object = {
-            $text: {$search: req.query.name},
-            category: req.query.category,
-            size: req.query.size,
-            quantity: {$gt: -100}
-        };
-    } else {
-        query_object = {
-            category: req.query.category,
-            size: req.query.size,
-            quantity: {$gt: -100}
-        };
+        query_object["$text"] = {"$search": req.query.name};
     }
-    // now remove any undefined values from query so it will succeed
-    Object.keys(query_object).forEach(key => (query_object[key] == null) && delete query_object[key]);
+    // nifty one liner to delete any null or undefined values so that we don't have to explicitly check earlier
+    query_object = Object.entries(query_object).reduce((a,[k,v]) => (v == null ? a : {...a, [k]:v}), {});
+    console.log(query_object);
     Item.find(query_object, function (err, items) {
-        if (err) return res.status(500);
+        if (err) return res.status(500).send(err);
         res.status(200).send(items);
     });
 });

@@ -1,6 +1,7 @@
 var mongoose = require('mongoose');
 
 var ItemSchema = new mongoose.Schema({
+    name: {type: String, required: true},
     upc: Number,
     category: String,
     description: {type: String, required: true},
