@@ -13,24 +13,35 @@ router.use(bodyParser.json());
  */
 router.get('/categories', function (req, res) {
     Item.distinct('category', function (err, categories) {
-        if (err) return res.status(500).send("Error getting distinct categories!");
+        if (err) return res.status(500).send(err);
         res.status(200).send(categories);
+    })
+});
+/**
+ * GET: /brands
+ * Gets distinct brands known to the app, for use when searching
+ */
+router.get('/brands', function (req,res) {
+    Item.district('brand',function (err, brands) {
+        if (err) return res.status(500).send(err);
+        res.status(200).send(brands);
     })
 });
 
 /**
  * /search accepts the following parameters:
  *  name: the name of the item.
- *  description: Item name/ description. Typically will include size, and name
+ *  brand: item brand
  *  category: Item category
  *  upc: Item Universal Product Code (used items will lack one)
  */
 router.get('/search', function (req, res) {
     // add all basic query parameters into object
     let query_object = {
-        description: req.query.description,
+        brand: req.query.brand,
         category: req.query.category,
         upc: req.query.upc,
+        condition: req.query.condition,
         // explicitly disable showing hidden items
         hidden: false
     };

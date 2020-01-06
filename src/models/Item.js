@@ -4,7 +4,8 @@ var ItemSchema = new mongoose.Schema({
     name: {type: String, required: true},
     upc: Number,
     category: String,
-    description: {type: String, required: true},
+    brand: String,
+    description: String, // keeping this for backwards compatibility, but aiming to phase out its usage
     condition: String,
     standard_price: {type: Number, required: true},
     wholesale_cost: Number,
