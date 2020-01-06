@@ -22,7 +22,7 @@ router.get('/categories', function (req, res) {
  * Gets distinct brands known to the app, for use when searching
  */
 router.get('/brands', function (req,res) {
-    Item.district('brand',function (err, brands) {
+    Item.distinct('brand', function (err, brands) {
         if (err) return res.status(500).send(err);
         res.status(200).send(brands);
     })
@@ -45,7 +45,6 @@ router.get('/search', function (req, res) {
         // explicitly disable showing hidden items
         hidden: false
     };
-    // TODO: raise the quantity to zero once inventory is managed correctly
     // if our query defines a name, add that here. Required since the name portion uses indexed searching (for speed)
     if (req.query.name) {
         query_object["$text"] = {"$search": req.query.name};
@@ -62,15 +61,43 @@ router.get('/search', function (req, res) {
 // everything below here is only for admins, so use the admin middleware to block it
 router.use(adminMiddleware);
 
-
+/**
+ * POST: /
+ * Adds a new item to the database.
+ * parameters:
+ * name: name of item. should have enough info to uniquely identify item
+ * upc: item upc. Required only if condition is new.
+ * category: item category
+ * brand: item brand
+ * condition: item condition ('New' or 'Used')
+ * standard_price: retail price of item
+ * wholesale_cost: wholesale price we pay for item
+ * desired_stock: stock of item that should be in shop
+ */
 // adds an item to the db. Note that quantity should start at 0
 router.post('/', function (req, res) {
+    const {name, upc, category, brand, condition, standard_price, wholesale_cost, desired_stock} = req.body;
+    // validate the request before proceeding
+    if (!((condition === 'Used' || upc)
+        && name
+        && category
+        && brand
+        && standard_price
+        && wholesale_cost
+        && desired_stock)){
+        return res.status(400).send("Malformed request, missing fields");
+    }
     Item.create({
-        name: req.body.name,
-        description: req.body.description,
-        price: req.body.price,
-        shop_cost: req.body.shop_cost,
-        warning_quantity: req.body.warning_quantity
+        name: name,
+        upc: upc,
+        category: category,
+        brand: brand,
+        condition: condition,
+        standard_price: standard_price,
+        wholesale_cost: wholesale_cost,
+        hidden: false,
+        desired_stock: desired_stock,
+        stock: 0
     }, function (err, item) {
         if (err) return res.status(500).send(err);
         res.status(200).send(item);
