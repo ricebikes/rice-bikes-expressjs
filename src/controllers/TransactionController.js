@@ -548,18 +548,17 @@ router.post('/:id/items', function (req, res) {
           let employee = false;
           for (user of users) {
             if (user.username === transaction.customer.email.replace("@rice.edu","")) {
-              console.log("You're an employee");
+              //console.log("You're an employee");
               employee = true;
               break;
             }
           }
-          transaction.items.push(item);
-          if (employee && item.shop_cost && item.shop_cost != 0) {
-            // employee pricing
+          if (employee && item.wholesale_cost && item.wholesale_cost != 0) {
+            // employee pricing -- set the price to a multiplier over wholesale
             let multiplier_over_wholesale = 1.15;
-            transaction.total_cost += Math.ceil(item.shop_cost * multiplier_over_wholesale);
+            transaction.items.push({item: item, price: Math.ceil(item.wholesale_cost * multiplier_over_wholesale)});
           } else {
-              transaction.total_cost += item.price;
+            transaction.items.push({item:item, price: item.standard_price});
           }
           // log this action
           addLogToTransaction(transaction, req, `Added Item ${item.name}`, function (err, logged_transaction) {
@@ -592,23 +591,10 @@ router.delete('/:id/items/:item_id', function (req, res) {
     if (!transaction) return res.status(404);
     User.find({},function (err, users) {
         if (err) return res.status(500).send(err);
-        let employee = false;
-        for (user of users) {
-            if (user.username === transaction.customer.email.replace("@rice.edu", "")) {
-                console.log("You're an employee");
-                employee = true;
-                break;
-            }
-        }
         for (let i = 0; i < transaction.items.length; i++) {
             let item = transaction.items[i];
-            if (item._id == req.params.item_id) {
-                if (employee && item.shop_cost && item.shop_cost != 0) {
-                    let multiplier_over_wholesale = 1.15;
-                    transaction.total_cost -= Math.ceil(item.shop_cost * multiplier_over_wholesale);
-                } else {
-                    transaction.total_cost -= item.price;
-                }
+            if (item.item._id === req.params.item_id) {
+                // simply delete the item by splicing it from the item list
                 transaction.items.splice(i, 1);
                 var description = `Deleted item ${item.name}`;
                 break;
@@ -647,7 +633,6 @@ router.post('/:id/repairs', function (req, res) {
       if (!repair) return res.status(404);
       var rep = {"repair": repair, "completed": false};
       transaction.repairs.push(rep);
-      transaction.total_cost += repair.price;
       addLogToTransaction(transaction,req,`Added repair ${repair.name}`,function (err, logged_transaction) {
         if(err){
           if(err ===404){
@@ -678,7 +663,6 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
     transaction.repairs = transaction.repairs.filter(function (rep) {
       if (rep._id == req.params.repair_id) {
         description = `Deleted repair ${rep.repair.name}`;
-        transaction.total_cost -= rep.repair.price;
         return false;
       } else return true;
     });

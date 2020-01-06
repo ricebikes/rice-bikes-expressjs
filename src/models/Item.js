@@ -5,6 +5,7 @@ var ItemSchema = new mongoose.Schema({
     upc: Number,
     category: String,
     description: {type: String, required: true},
+    condition: String,
     standard_price: {type: Number, required: true},
     wholesale_cost: Number,
     hidden: {type: Boolean, default: false},

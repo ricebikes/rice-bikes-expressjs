@@ -63,7 +63,7 @@ html
 
                     each item in transaction.items
                         ul
-                            li #{item.name} - $#{item.price}
+                            li #{item.item.name} - $#{item.price}
                 h4
                     | Repairs
 
@@ -71,8 +71,10 @@ html
                         ul
                             li #{repair.repair.name} - $#{repair.repair.price}
                     h4 Total
-
-                    strong $#{transaction.total_cost}
+                    -
+                      const total = transaction.items.reduce((accumulator, current_value)=> current_value + accumulator.price,0)
+                        + transaction.repairs.reduce((accumulator, current_value)=> current_value + accumulator.repair.price,0)
+                    strong Total: #{total}
             .divider
             .centered
                 p Thank you!
