@@ -13,8 +13,7 @@ var ItemSchema = new mongoose.Schema({
     stock: {type: Number, default: 0},
 });
 // text index lets us search by name
-ItemSchema.index({description: 'text'});
-ItemSchema.index({upc: 1});
+ItemSchema.index({name: 'text'});
 ItemSchema.index({category: 1});
 mongoose.model('Item', ItemSchema);
 
