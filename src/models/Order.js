@@ -3,7 +3,7 @@ var mongoose = require('mongoose');
 var OrderSchema = new mongoose.Schema({
     supplier: {type: String, required: true},
     date_created: {type: Date, required: true},
-    tracking_number: Number,
+    tracking_number: String,
     status: String,
     items: [{item: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'},
         quantity: Number, transaction: {type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', required: false}}]

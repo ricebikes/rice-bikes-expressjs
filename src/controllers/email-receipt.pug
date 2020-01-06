@@ -72,8 +72,8 @@ html
                             li #{repair.repair.name} - $#{repair.repair.price}
                     h4 Total
                     -
-                      const total = transaction.items.reduce((accumulator, current_value)=> current_value + accumulator.price,0)
-                        + transaction.repairs.reduce((accumulator, current_value)=> current_value + accumulator.repair.price,0)
+                      const total = transaction.items.reduce((accumulator, current_value)=> accumulator + current_value.price,0)
+                        + transaction.repairs.reduce((accumulator, current_value)=> accumulator + current_value.repair.price,0)
                     strong Total: #{total}
             .divider
             .centered

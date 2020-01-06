@@ -122,7 +122,7 @@ async function updateItemStock(itemID, quantity) {
  * put body:
  * {
  *   supplier: String
- *   tracking_number: Number
+ *   tracking_number: String
  *   items : [ {item: Item, quantity: Number} ]
  *   status: String
  * }
