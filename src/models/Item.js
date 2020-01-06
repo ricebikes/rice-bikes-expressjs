@@ -10,6 +10,7 @@ var ItemSchema = new mongoose.Schema({
     standard_price: {type: Number, required: true},
     wholesale_cost: Number,
     hidden: {type: Boolean, default: false},
+    desired_stock: {type: Number, required: true},
     stock: {type: Number, default: 0},
 });
 // text index lets us search by name
