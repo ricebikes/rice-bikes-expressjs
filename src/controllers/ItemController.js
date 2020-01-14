@@ -3,9 +3,12 @@ var router = express.Router();
 var bodyParser = require('body-parser');
 var Item = require('../models/Item');
 var adminMiddleware = require('../middleware/AdminMiddleware');
+var authMiddleware = require('../middleware/AuthMiddleware');
 
 router.use(bodyParser.json());
 
+// everything below here is only for admins, so use the admin middleware to block it
+router.use(authMiddleware);
 
 /**
  * GET: /categories
