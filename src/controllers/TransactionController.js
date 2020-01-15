@@ -222,7 +222,7 @@ router.put('/:id/description', function(req,res) {
           "Updated Transaction Description",
           function (err, new_transaction) {
         if(err){
-          if(err == 404){
+          if(err === 404){
             return res.status(404).send();
           }else{
             return res.status(500).send(err);
@@ -258,18 +258,20 @@ router.put('/:id/complete', function(req,res) {
       for (let item of transaction.items){
         Item.findById(item._id, function(err, found_item) {
           if (err) return res.status(500).send(err);
-          // raise or lower item quantity
+          // raise or lower item stock
           if(req.body.complete){
-           found_item.quantity -= 1;
+           found_item.stock -= 1;
           }else {
-            found_item.quantity += 1;
+            found_item.stock += 1;
           }
           // save item
           found_item.save(function (err) {
             if (err) return res.status(500).send(err);
           });
           // send low stock email if needed
-          if (found_item.quantity <= found_item.warning_quantity) {
+            /*
+            Currently disabling this
+          if (found_item.stock <= found_item.warning_stock) {
             User.find({roles:'operations'},function (err, user_array) {
               for (user of user_array){
                   let email = user.username+'@rice.edu';
@@ -284,13 +286,14 @@ router.put('/:id/complete', function(req,res) {
               }
             });
           }
+          */
         });
       }
       // log this action
     let description = req.body.complete ? 'Completed Transaction' : 'Reopened Transaction';
     addLogToTransaction(transaction, req,description, function (err, logged_transaction) {
       if(err){
-        if(err == 404){
+        if(err === 404){
           return res.status(404).send('No User found');
         }else {
           return res.status(500).send(err);
@@ -357,12 +360,12 @@ router.put('/:id/update_repair', function (req,res) {
     if (transaction.repairs.length === 0) return res.status(404).send('No repairs associated with this transaction');
       transaction.repairs.forEach(function (current_repair, idx) {
         // iterate to find the repair that is completed
-        if( current_repair._id == req.body._id){
+        if( current_repair._id.toString() === req.body._id){
             transaction.repairs[idx].completed = req.body.completed;
             let description = req.body.completed ? `Completed Repair ${current_repair.repair.name}` : `Opened Repair ${current_repair.repair.name}`;
             addLogToTransaction(transaction,req,description,function (err,logged_transaction) {
               if (err) {
-                if (err == 404) {
+                if (err === 404) {
                   return res.status(404).send('No user found');
                 }else {
                   return res.status(500).send(err);
@@ -396,9 +399,10 @@ router.put('/:id', function (req, res) {
         Item.findById(item._id, function (err, found_item) {
           if (err) return res.status(500).send(err);
           //lower the item inventory
-          found_item.quantity -= 1;
-          // if inventory drops below warning value, send an alert email
-          if (found_item.quantity <= found_item.warning_quantity) {
+          found_item.stock -= 1;
+          /*
+          // if inventory drops below warning value, send an alert email (currently disabled)
+          if (found_item.stock <= found_item.warning_stock) {
             // send an alert email to any user with the operations role
             User.find({roles:'operations'},function (err, user_array) {
               for (user of user_array){
@@ -414,6 +418,7 @@ router.put('/:id', function (req, res) {
               }
             })
           }
+          */
           found_item.save(function (err, new_item) {
             console.log(new_item);
             if (err) return res.status(500).send(err);
@@ -431,14 +436,14 @@ router.put('/:id', function (req, res) {
         });
       }
     }
-    // in addition, make sure that if a bike is re-opened quantity is raised
+    // in addition, make sure that if a bike is re-opened stock is raised
     else if (transaction.complete && !req.body.complete) {
       for (let item of req.body.items) {
         Item.findById(item._id, function (err, found_item) {
           if (err) return res.status(500).send(err);
           //lower the item inventory
-          found_item.quantity += 1;
-          found_item.save(function (err, new_item) {
+          found_item.stock += 1;
+          found_item.save(function (err) {
             if (err) return res.status(500).send(err);
 
           })
@@ -521,7 +526,7 @@ router.delete('/:id/bikes/:bike_id', function (req, res) {
     if (err) return res.status(500);
     if (!transaction) return res.status(404);
     transaction.bikes.splice(transaction.bikes.find(function (b) {
-      return b = req.params.bike_id
+      return req.params.bike_id
     }), 1);
     transaction.save(function (err, transaction) {
       res.status(200).send(transaction);
@@ -553,7 +558,7 @@ router.post('/:id/items', function (req, res) {
               break;
             }
           }
-          if (employee && item.wholesale_cost && item.wholesale_cost != 0) {
+          if (employee && item.wholesale_cost && item.wholesale_cost !== 0) {
             // employee pricing -- set the price to a multiplier over wholesale
             let multiplier_over_wholesale = 1.15;
             transaction.items.push({item: item, price: Math.ceil(item.wholesale_cost * multiplier_over_wholesale)});
@@ -563,7 +568,7 @@ router.post('/:id/items', function (req, res) {
           // log this action
           addLogToTransaction(transaction, req, `Added Item ${item.name}`, function (err, logged_transaction) {
               if (err) {
-                  if (err == 404) {
+                  if (err === 404) {
                       return res.status(404).send();
                   } else {
                       return res.status(500).send();
@@ -587,34 +592,31 @@ router.post('/:id/items', function (req, res) {
  */
 router.delete('/:id/items/:item_id', function (req, res) {
   Transaction.findById(req.params.id, function (err, transaction) {
-    if (err) return res.status(500);
-    if (!transaction) return res.status(404);
-    User.find({},function (err, users) {
-        if (err) return res.status(500).send(err);
-        for (let i = 0; i < transaction.items.length; i++) {
-            let item = transaction.items[i];
-            if (item.item._id === req.params.item_id) {
-                // simply delete the item by splicing it from the item list
-                transaction.items.splice(i, 1);
-                var description = `Deleted item ${item.name}`;
-                break;
-            }
-        }
-        addLogToTransaction(transaction, req, description, function (err, logged_transaction) {
-            if (err) {
-                if (err === 404) {
-                    return res.status(404).send('No User found');
-                } else {
-                    return res.status(500).send(err);
-                }
-            }
-            logged_transaction.save(function (err, new_transaction) {
-                if (err) return res.status(500).send();
-                return res.status(200).send(new_transaction);
-            });
-        });
-    });
-
+  if (err) return res.status(500);
+  if (!transaction) return res.status(404);
+  let action_description;
+  for (let i = 0; i < transaction.items.length; i++) {
+      let item = transaction.items[i].item;
+      if (item._id.toString() === req.params.item_id) {
+          // simply delete the item by splicing it from the item list
+          transaction.items.splice(i, 1);
+          action_description = `Deleted item ${item.name}`;
+          break;
+      }
+  }
+  addLogToTransaction(transaction, req, action_description, function (err, logged_transaction) {
+      if (err) {
+          if (err === 404) {
+              return res.status(404).send('No User found');
+          } else {
+              return res.status(500).send(err);
+          }
+      }
+      logged_transaction.save(function (err, new_transaction) {
+          if (err) return res.status(500).send();
+          return res.status(200).send(new_transaction);
+      });
+  });
   })
 });
 
@@ -661,7 +663,7 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
     if (!transaction) return res.status(404);
     let description = '';
     transaction.repairs = transaction.repairs.filter(function (rep) {
-      if (rep._id == req.params.repair_id) {
+      if (rep._id.toString() === req.params.repair_id) {
         description = `Deleted repair ${rep.repair.name}`;
         return false;
       } else return true;
