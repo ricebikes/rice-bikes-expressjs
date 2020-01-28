@@ -261,13 +261,13 @@ router.put('/:id/complete', function(req,res) {
     if (transaction.date_created > tax_application_date &&
         req.body.complete) {
       console.log("Tax must be applied for this transaction!");
-      transaction.total_cost = Math.round(transaction.total_cost * (1 + tax_rate));
+      transaction.total_cost = transaction.total_cost * (1 + tax_rate);
+      transaction.total_cost = transaction.total_cost.toFixed(2);
     } else if (transaction.date_created > tax_application_date &&
                 !req.body.complete) {
       // transaction is being reopened. We must recreate price.
-      transaction.total_cost =
-          transaction.items.reduce((current_cost, next_item) => current_cost + next_item.price, 0) +
-          transaction.repairs.reduce((current_cost, next_repair) => current_cost + next_repair.repair.price, 0);
+      transaction.total_cost = transaction.total_cost / (1 + tax_rate);
+      transaction.total_cost = transaction.total_cost.toFixed(0);
       console.log("Total cost:" + transaction.total_cost)
     }
     // change item inventory, and trigger a low stock email if required
