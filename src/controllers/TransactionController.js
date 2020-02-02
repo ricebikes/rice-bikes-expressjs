@@ -607,14 +607,14 @@ router.delete('/:id/items/:item_id', function (req, res) {
         for (let i = 0; i < transaction.items.length; i++) {
             let item = transaction.items[i].item;
             if (item._id.toString() === req.params.item_id) {
+                // decrease total_cost
+                transaction.total_cost-= transaction.items[i].price;
                 // simply delete the item by splicing it from the item list
                 transaction.items.splice(i, 1);
                 action_description = `Deleted item ${item.name}`;
                 break;
             }
         }
-        // decrease total_cost
-        transaction.total_cost-= item.price;
         addLogToTransaction(transaction, req, action_description, function (err, logged_transaction) {
             if (err) {
                 if (err === 404) {
