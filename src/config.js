@@ -13,7 +13,12 @@ let CONFIG = function() {
         pass: 'mPsJ9XKegskYgEaqZr',
         host: 'smtp.ethereal.email',
         port: 587
-      }
+      },
+      tax: {
+        cutoff_date: new Date(1580277600000), // 06:00 GMT on 1/29/2020 (Tax is only applied after this date)
+        rate: 0.0825
+      },
+      employee_price_multipler: 1.17
     }
   } else {
     return {
@@ -27,7 +32,12 @@ let CONFIG = function() {
         pass: 'mPsJ9XKegskYgEaqZr',
         host: 'smtp.ethereal.email',
         port: 587
-      }
+      },
+      tax: {
+        cutoff_date: new Date(1580277600000), // 06:00 GMT on 1/29/2020
+        rate: 0.0825
+      },
+      employee_price_multipler: 1.17
     }
   }
 };

@@ -11,6 +11,9 @@ var TransactionSchema = new mongoose.Schema({
   transaction_type: String,
   date_created: Date,
   date_completed: Date,
+  total_cost: Number,
+  // If this is an employee we want to apply tax to the transaction
+  employee: {type: Boolean, default: false},
   complete: {type: Boolean, default: false},
   is_paid: {type: Boolean, default: false},
   refurb: {type:Boolean, default:false},
@@ -35,8 +38,7 @@ var autoPopulate = function (next) {
   this.populate('bikes');
   this.populate('repairs.repair');
   this.populate('items.item');
-  // need to populate user ref of actions
-  this.populate('actions.employee');
+  this.populate('actions.employee'); // user ref of action
   next();
 };
 
