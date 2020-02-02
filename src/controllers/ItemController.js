@@ -7,7 +7,6 @@ var authMiddleware = require('../middleware/AuthMiddleware');
 
 router.use(bodyParser.json());
 
-// everything below here is only for admins, so use the admin middleware to block it
 router.use(authMiddleware);
 
 /**
@@ -32,16 +31,33 @@ router.get('/brands', function (req,res) {
 });
 
 /**
+ * GET: /sizes?category=CATEGORY
+ * Gets distinct sizes known to the app for a specific item category
+ * CATEGORY: item category, retrieved via GET: /categories
+ */
+router.get('/sizes', async (req, res) => {
+    // Using async notation for cleaner code.
+    try {
+        const results = Item.distinct ('sizes', {category: req.query.category});
+        res.status(200).send(results);
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+/**
  * /search accepts the following parameters:
  *  name: the name of the item.
  *  brand: item brand
  *  category: Item category
+ *  size: Item size
  *  upc: Item Universal Product Code (used items will lack one)
  */
 router.get('/search', function (req, res) {
     // add all basic query parameters into object
     let query_object = {
         brand: req.query.brand,
+        size: req.query.size,
         category: req.query.category,
         upc: req.query.upc,
         condition: req.query.condition,
