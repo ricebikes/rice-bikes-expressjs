@@ -30,6 +30,7 @@ router.get('/brands', function (req,res) {
     })
 });
 
+
 /**
  * GET: /sizes?category=CATEGORY
  * Gets distinct sizes known to the app for a specific item category
@@ -38,7 +39,7 @@ router.get('/brands', function (req,res) {
 router.get('/sizes', async (req, res) => {
     // Using async notation for cleaner code.
     try {
-        const results = Item.distinct ('sizes', {category: req.query.category});
+        const results = await Item.distinct ('size', {category: req.query.category});
         res.status(200).send(results);
     } catch (err) {
         res.status(500).send(err);

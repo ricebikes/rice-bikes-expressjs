@@ -652,7 +652,30 @@ router.post('/:id/repairs', function (req, res) {
   })
 });
 
-
+/**
+ * TEMPORARY method
+ * TODO: delete this method
+ * Upgrades the database to work with new POS fields and definitions
+ */
+/*
+router.get('/:id/upgrade', async (req, res) => {
+  console.log("Upgrade triggered");
+  try{
+      let transactions = await Transaction.find();
+      for (let transaction of transactions) {
+          let newItems = [];
+          for (let item of transaction.items) {
+              newItems.push({item: item, price: item.standard_price});
+          }
+          transaction.newItems = newItems;
+          await transaction.save();
+      }
+      res.status(200).send("Upgrade performed");
+  }catch (err) {
+      res.status(500).send(err);
+  }
+});
+*/
 /**
  * Requires user ID in header
  * Deletes repair from transaction
