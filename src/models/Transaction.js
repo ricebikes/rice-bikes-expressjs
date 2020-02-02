@@ -34,7 +34,7 @@ var autoPopulate = function (next) {
   this.populate('customer');
   this.populate('bikes');
   this.populate('repairs.repair');
-  this.populate('items');
+  this.populate('items.item');
   // need to populate user ref of actions
   this.populate('actions.employee');
   next();
