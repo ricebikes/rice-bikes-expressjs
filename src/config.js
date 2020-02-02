@@ -16,7 +16,8 @@ let CONFIG = function() {
       },
       tax: {
         cutoff_date: new Date(1580277600000), // 06:00 GMT on 1/29/2020 (Tax is only applied after this date)
-        rate: 0.0825
+        rate: 0.0825,
+        DBname: "Sales Tax"
       },
       employee_price_multipler: 1.17
     }
@@ -35,7 +36,8 @@ let CONFIG = function() {
       },
       tax: {
         cutoff_date: new Date(1580277600000), // 06:00 GMT on 1/29/2020
-        rate: 0.0825
+        rate: 0.0825,
+        DBname: "Sales Tax"
       },
       employee_price_multipler: 1.17
     }

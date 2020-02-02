@@ -18,15 +18,6 @@ const config = require('../config')();
 router.use(bodyParser.json());
 router.use(authMiddleware);
 
-/**
- * Convenience function to get the "Tax item", used for displaying tax on a purchase
- * @param base_cost: cost before tax
- *  Rice Bikes did not tax before Wednesday, January 29th 2020
- */
-async function getTax(base_cost) {
-    const tax_item = await Item.find({name:"Tax"});
-    return {item: tax_item, price: config.tax.rate * base_cost};
-}
 
 /*
 Posts a single transaction - "POST /transactions"
@@ -73,24 +64,36 @@ router.post('/', function (req, res) {
                     email: req.body.customer.email
                 },
                 function (err, customer) {
-                    Transaction.create({
-                        date_created: Date.now(),
-                        transaction_type: req.body.transaction_type,
-                        customer: customer._id
-                    }, function (err, transaction) {
-                        if (err) return res.status(500);
-                        addLogToTransaction(transaction, req, "Created Transaction",
-                            function (err, loggedTransaction) {
-                                if (err) return res.status(500);
-                                loggedTransaction.save(function (err, finalTransaction) {
+                    User.find({}, function (err, users) {
+                        if (err) return res.status(500).send(err);
+                        let employee = false;
+                        for (user of users) {
+                            if (user.username === customer.email.replace("@rice.edu", "")) {
+                                employee = true;
+                                break;
+                            }
+                        }
+                        Transaction.create({
+                            date_created: Date.now(),
+                            transaction_type: req.body.transaction_type,
+                            customer: customer._id,
+                            employee: employee
+                        }, function (err, transaction) {
+                            if (err) return res.status(500);
+                            addLogToTransaction(transaction, req, "Created Transaction",
+                                function (err, loggedTransaction) {
                                     if (err) return res.status(500);
-                                    res.status(200).send(finalTransaction);
+                                    loggedTransaction.save(function (err, finalTransaction) {
+                                        if (err) return res.status(500);
+                                        res.status(200).send(finalTransaction);
+                                    });
                                 });
-                            });
-                    })
+                        });
+                    });
                 });
         }
-    } else {
+    }
+    else {
         res.status(400).send("No customer specified");
     }
 });
@@ -566,13 +569,33 @@ router.post('/:id/items', async (req, res) => {
         const item = await Item.findById(req.body._id);
         if (!item) return res.status(404).send("No item found");
         let newItem;
-        if (transaction.employee) {
+        if (transaction.employee && item.wholesale_cost > 0) {
+            // Apply employee pricing for this item.
             newItem = {item: item, price: item.wholesale_cost * config.employee_price_multipler};
         } else {
             newItem = {item: item, price: item.standard_price};
         }
         transaction.total_cost+= newItem.price;
         transaction.items.push(newItem);
+        /*  Rice Bikes did not tax before Wednesday, January 29th 2020 */
+        if (transaction.date_created > config.tax.cutoff_date) {
+            // apply tax to the transaction
+            // remove old tax item
+            transaction.items = transaction.items.filter(candidate => {
+                console.log(candidate);
+                if (candidate.item.name === config.tax.DBname) {
+                    // remove this item, and drop the cost to remove current tax
+                    transaction.total_cost -= candidate.price;
+                    return false;
+                } else {
+                    return true; // not the tax item, keep it
+                }
+            });
+            const tax_item = await Item.findById("5e3693d5eac10d774b23b6d3");
+            const calculated_tax = {item: tax_item, price: transaction.total_cost * config.tax.rate};
+            transaction.items.push(calculated_tax);
+            transaction.total_cost += calculated_tax.price;
+        }
         addLogToTransaction(transaction,
             req,
             `Added Item ${item.name}`,

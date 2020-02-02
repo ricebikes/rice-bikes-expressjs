@@ -11,7 +11,7 @@ var TransactionSchema = new mongoose.Schema({
   transaction_type: String,
   date_created: Date,
   date_completed: Date,
-  total_cost: Number,
+  total_cost: {type: Number, default: 0},
   // If this is an employee we want to apply tax to the transaction
   employee: {type: Boolean, default: false},
   complete: {type: Boolean, default: false},

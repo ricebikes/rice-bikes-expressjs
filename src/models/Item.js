@@ -3,7 +3,7 @@ var mongoose = require('mongoose');
 var ItemSchema = new mongoose.Schema({
     name: {type: String, required: true},
     upc: Number,
-    category: String,
+    category: {type: String, default: "Uncategorized"},
     size: String,
     brand: String,
     description: String,
