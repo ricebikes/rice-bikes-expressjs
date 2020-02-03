@@ -131,7 +131,7 @@ router.get('/searchByDate/:dates', function (req, res) {
  * @param transaction - transaction object from mongoose
  * @param req - http request object
  * @param description - action description
- * @param callback- function with arguments: err- error encountered, transaction - updated transaction
+ * @return Promise<Transaction> -- transaction with log on it
  */
 async function addLogToTransaction(transaction, req, description) {
     const user_id = req.headers['user-id'];
@@ -150,6 +150,52 @@ async function addLogToTransaction(transaction, req, description) {
         // Throw the error, we expect caller to handle it
         throw e;
     }
+}
+
+/**
+ * Convenience function to round to two decimal places
+ * @param num - number to round
+ * @return {Number} number rounded to two decimal places
+ */
+function round2(num) {
+    const round = Math.round( num * 100 + Number.EPSILON ) / 100
+    console.log(num + " Rounded to " + round);
+    return round;
+}
+
+/**
+ * Adds tax to a transaction, or updates it
+ * @param transaction
+ * @return {Promise<Transaction>} transaction with correct tax value
+ */
+async function calculateTax(transaction) {
+    /*  Rice Bikes did not tax before Wednesday, January 29th 2020 */
+    try {
+        if (transaction.date_created > config.tax.cutoff_date) {
+        // apply tax to the transaction
+        // remove old tax item
+        transaction.items = transaction.items.filter(function (candidate) {
+            if (candidate.item.name === config.tax.DBname) {
+                // remove this item, and drop the cost to remove current tax
+                transaction.total_cost -= candidate.price;
+                return false;
+            } else return true; // not the tax item, keep it
+        });
+        const tax_item = await Item.findOne({name : config.tax.DBname});
+        let calculated_tax = {item: tax_item,
+            price: round2(transaction.total_cost * config.tax.rate)};
+        // round off the tax value
+        if (calculated_tax.price > Number.EPSILON) {
+            // Tax is nonzero, add a tax item
+            transaction.items.push(calculated_tax);
+        }
+        transaction.total_cost = round2(transaction.total_cost + calculated_tax.price);
+        return transaction;
+        }
+    } catch (err) {
+        throw err; // caller will handle it
+    }
+
 }
 /*
  Searches for transactions by customer XOR bike XOR transaction description - "GET /transactions/search?customer="
@@ -433,27 +479,10 @@ router.post('/:id/items', async (req, res) => {
         }
         transaction.total_cost+= newItem.price;
         transaction.items.push(newItem);
-        await transaction.save();
-        /*  Rice Bikes did not tax before Wednesday, January 29th 2020 */
-        if (transaction.date_created > config.tax.cutoff_date) {
-            // apply tax to the transaction
-            // remove old tax item
-            transaction.items = transaction.items.filter(function (candidate) {
-                console.log(candidate);
-                if (candidate.item.name === config.tax.DBname) {
-                    console.log("Found Item" + candidate.item.name);
-                    // remove this item, and drop the cost to remove current tax
-                    transaction.total_cost -= candidate.price;
-                    return false;
-                } else return true; // not the tax item, keep it
-            });
-            const tax_item = await Item.findById("5e3693d5eac10d774b23b6d3");
-            const calculated_tax = {item: tax_item, price: transaction.total_cost * config.tax.rate};
-            transaction.items.push(calculated_tax);
-            console.log(transaction.items);
-            transaction.total_cost += calculated_tax.price;
-        }
-        const loggedTransaction = await addLogToTransaction(transaction, req, `Added Item ${item.name}`);
+        // we save the transaction here to make sure the first item we added is saved to the database
+        await transaction.save(); // save transaction before working on tax
+        const taxedTransaction = await calculateTax(transaction);
+        const loggedTransaction = await addLogToTransaction(taxedTransaction, req, `Added Item ${item.name}`);
         const finalTransaction = await loggedTransaction.save();
         res.status(200).send(finalTransaction);
     } catch (err){
@@ -482,7 +511,8 @@ router.delete('/:id/items/:item_id', async (req, res) => {
                 break;
             }
         }
-        let loggedTransaction = await addLogToTransaction(transaction, req, action_description);
+        let taxedTransaction = await calculateTax(transaction);
+        let loggedTransaction = await addLogToTransaction(taxedTransaction, req, action_description);
         let savedTransaction = await loggedTransaction.save();
         res.status(200).send(savedTransaction);
     } catch (err) {
@@ -506,7 +536,8 @@ router.post('/:id/repairs', async (req, res) => {
         let rep = {"repair": repair, "completed": false};
         transaction.repairs.push(rep);
         transaction.total_cost += repair.price;
-        let loggedTransaction = await addLogToTransaction(transaction, req, `Added repair ${repair.name}`);
+        let taxedTransaction = await calculateTax(transaction);
+        let loggedTransaction = await addLogToTransaction(taxedTransaction, req, `Added repair ${repair.name}`);
         let savedTransaction = await loggedTransaction.save();
         res.status(200).send(savedTransaction);
     } catch (err) {
@@ -554,8 +585,9 @@ router.delete('/:id/repairs/:repair_id', async (req, res) => {
                 return false;
             } else return true;
         });
-        let loggedTransaction = addLogToTransaction(transaction, req, description);
-        let savedTransaction = loggedTransaction.save();
+        let taxedTransaction = await calculateTax(transaction)
+        let loggedTransaction = await addLogToTransaction(taxedTransaction, req, description);
+        let savedTransaction = await loggedTransaction.save();
         res.status(200).send(savedTransaction);
     } catch (err) {
         res.status(500).send(err);
