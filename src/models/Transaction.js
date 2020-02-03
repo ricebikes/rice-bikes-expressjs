@@ -1,7 +1,7 @@
-var mongoose = require('mongoose');
-var autoIncrement = require('mongoose-auto-increment');
-var _ = require('underscore');
-var config = require('../config')();
+const mongoose = require('mongoose');
+const autoIncrement = require('mongoose-plugin-autoinc');
+const _ = require('underscore');
+const config = require('../config')();
 
 var connection = mongoose.createConnection(config.db_uri);
 autoIncrement.initialize(connection);

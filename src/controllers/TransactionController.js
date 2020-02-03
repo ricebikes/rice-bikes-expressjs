@@ -581,19 +581,19 @@ router.post('/:id/items', async (req, res) => {
         if (transaction.date_created > config.tax.cutoff_date) {
             // apply tax to the transaction
             // remove old tax item
-            transaction.items = transaction.items.filter(candidate => {
+            transaction.items = transaction.items.filter(function (candidate) {
                 console.log(candidate);
                 if (candidate.item.name === config.tax.DBname) {
+                    console.log("Found Item" + candidate.item.name);
                     // remove this item, and drop the cost to remove current tax
                     transaction.total_cost -= candidate.price;
                     return false;
-                } else {
-                    return true; // not the tax item, keep it
-                }
+                } else return true; // not the tax item, keep it
             });
             const tax_item = await Item.findById("5e3693d5eac10d774b23b6d3");
             const calculated_tax = {item: tax_item, price: transaction.total_cost * config.tax.rate};
             transaction.items.push(calculated_tax);
+            console.log(transaction.items);
             transaction.total_cost += calculated_tax.price;
         }
         addLogToTransaction(transaction,
