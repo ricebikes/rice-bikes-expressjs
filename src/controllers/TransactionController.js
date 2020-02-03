@@ -49,7 +49,7 @@ router.post('/', async (req, res) => {
                    break;
                }
            }
-           let transaction = Transaction.create({
+           let transaction = await Transaction.create({
                date_created: Date.now(),
                transaction_type: req.body.transaction_type,
                customer: customer._id,
