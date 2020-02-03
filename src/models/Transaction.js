@@ -4,7 +4,6 @@ const _ = require('underscore');
 const config = require('../config')();
 
 var connection = mongoose.createConnection(config.db_uri);
-autoIncrement.initialize(connection);
 
 var TransactionSchema = new mongoose.Schema({
   description: String,

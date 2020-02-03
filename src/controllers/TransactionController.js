@@ -19,82 +19,50 @@ router.use(bodyParser.json());
 router.use(authMiddleware);
 
 
-/*
-Posts a single transaction - "POST /transactions"
+/**
+ Posts a single transaction - "POST /transactions"
+ If customer does exist, req.body.customer._id must be filled
  */
-router.post('/', function (req, res) {
-    if (req.body.customer) {
-        if (req.body.customer._id) {
-            Customer.findById(req.body.customer._id, function (err, customer) {
-                if (err) return res.status(500);
+router.post('/', async (req, res) => {
+    try {
+       if (req.body.customer) {
+           let customer;
+           if (req.body.customer._id) {
+                // Find the customer we are told exists.
+                customer = await Customer.findById(req.body.customer._id);
                 if (!customer) return res.status(404).send("Customer not found");
-                // See if the transaction is for an employee (and if so apply employee pricing).
-                User.find({}, function (err, users) {
-                    if (err) return res.status(500).send(err);
-                    let employee = false;
-                    for (user of users) {
-                        if (user.username === customer.email.replace("@rice.edu", "")) {
-                            employee = true;
-                            break;
-                        }
-                    }
-                    Transaction.create({
-                            date_created: Date.now(),
-                            transaction_type: req.body.transaction_type,
-                            customer: customer._id,
-                            employee: employee
-                        },
-                        function (err, transaction) {
-                            if (err) return res.status(500);
-                            addLogToTransaction(transaction, req, "Created Transaction",
-                                function (err, loggedTransaction) {
-                                    if (err) return res.status(500);
-                                    loggedTransaction.save(function (err, finalTransaction) {
-                                        if (err) return res.status(500);
-                                        res.status(200).send(finalTransaction);
-                                    });
-                                });
-                        });
-                });
-            });
-        } else {
-            Customer.create({
+           } else {
+               // Create a new customer.
+               customer = await Customer.create({
                     first_name: req.body.customer.first_name,
                     last_name: req.body.customer.last_name,
-                    email: req.body.customer.email
-                },
-                function (err, customer) {
-                    User.find({}, function (err, users) {
-                        if (err) return res.status(500).send(err);
-                        let employee = false;
-                        for (user of users) {
-                            if (user.username === customer.email.replace("@rice.edu", "")) {
-                                employee = true;
-                                break;
-                            }
-                        }
-                        Transaction.create({
-                            date_created: Date.now(),
-                            transaction_type: req.body.transaction_type,
-                            customer: customer._id,
-                            employee: employee
-                        }, function (err, transaction) {
-                            if (err) return res.status(500);
-                            addLogToTransaction(transaction, req, "Created Transaction",
-                                function (err, loggedTransaction) {
-                                    if (err) return res.status(500);
-                                    loggedTransaction.save(function (err, finalTransaction) {
-                                        if (err) return res.status(500);
-                                        res.status(200).send(finalTransaction);
-                                    });
-                                });
-                        });
-                    });
-                });
-        }
-    }
-    else {
-        res.status(400).send("No customer specified");
+                    email: req.body.customer.email})
+
+           }
+           // See if the customer is an employee, and apply discount if so
+           const users = await User.find({});
+           let employee = false;
+           for (user of users) {
+               if (user.username === customer.email.replace("@rice.edu","")) {
+                   // Go by username to find employee.
+                   employee = true;
+                   break;
+               }
+           }
+           let transaction = Transaction.create({
+               date_created: Date.now(),
+               transaction_type: req.body.transaction_type,
+               customer: customer._id,
+               employee: employee
+           });
+           const loggedTransaction = await addLogToTransaction(transaction, req, "Created Transaction");
+           const savedTransaction = await loggedTransaction.save();
+           res.status(200).send(savedTransaction);
+       } else {
+           res.status(400).send("No customer specified");
+       }
+    } catch (err) {
+        return res.status(500).send(err);
     }
 });
 
@@ -104,13 +72,13 @@ Gets all transactions - "GET /transactions"
 If query parameters are supplied, they are passed in to the find function - "GET /transactions?complete=true" finds
 transactions with the property { "complete": true }.
  */
-router.get('/', function (req, res) {
-    Transaction.find(req.query)
-        .exec(function (err, transactions) {
-            if (err) return res.status(500).send();
-            return res.status(200).send(transactions);
-        })
-
+router.get('/', async (req, res) =>{
+    try {
+        const transactions = await Transaction.find(req.query);
+        res.status(200).send(transactions);
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 
@@ -165,20 +133,23 @@ router.get('/searchByDate/:dates', function (req, res) {
  * @param description - action description
  * @param callback- function with arguments: err- error encountered, transaction - updated transaction
  */
-function addLogToTransaction(transaction, req, description, callback) {
+async function addLogToTransaction(transaction, req, description) {
     const user_id = req.headers['user-id'];
-    if (!user_id) return callback({error:'did not find a user-id header'},null);
-    User.findById(user_id,function (err, user) {
-        if(err) callback(err,null);
-        if(!user) callback(404,null);
-        let action = {
+    if (!user_id) throw {error:'did not find a user-id header'};
+    try {
+        const user = await User.findById(user_id);
+        const action = {
             "employee": user,
             "description": description,
             "time": Date.now()
         };
+        // Add this action first in the array
         transaction.actions.unshift(action);
-        callback(null,transaction);
-    });
+        return transaction;
+    } catch (e) {
+        // Throw the error, we expect caller to handle it
+        throw e;
+    }
 }
 /*
  Searches for transactions by customer XOR bike XOR transaction description - "GET /transactions/search?customer="
@@ -211,12 +182,13 @@ router.get('/search', function (req, res) {
 /*
 Gets a single transaction - "GET /transactions/:id"
  */
-router.get('/:id', function (req, res) {
-    Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500);
-        if (!transaction) return res.status(404).send("No transaction found.");
+router.get('/:id', async (req, res) => {
+    try {
+        const transaction = await Transaction.findById(req.params.id);
         res.status(200).send(transaction);
-    });
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 
@@ -229,37 +201,21 @@ Functions to update transactions. Split up to allow tracking user actions.
  requires user's ID in header
  @param description - description to update transaction with
  */
-router.put('/:id/description', function(req,res) {
-    Transaction.findById(req.params.id, function(err, transaction) {
-            if (err) return res.status(500).send(err);
-            if (!transaction) return res.status(404).send();
-            let user_id = req.headers["user-id"];
-            User.findById(user_id,function (err, user) {
-                if (err) return res.status(500).send(err);
-                if (!user) return res.status(404).send("No user found!");
-                transaction.description = req.body.description + "- " + user.firstname + " " + user.lastname;
-                // create log of this action
-                addLogToTransaction(transaction,
-                    req,
-                    "Updated Transaction Description",
-                    function (err, new_transaction) {
-                        if(err){
-                            if(err === 404){
-                                return res.status(404).send();
-                            }else{
-                                return res.status(500).send(err);
-                            }
-                        }
-                        // save transaction
-                        new_transaction.save(function (err, final_transaction) {
-                            if (err) return res.status(500).send(err);
-                            res.status(200).send(final_transaction);
-                        })
-                    });
-            });
-
-        }
-    );
+router.put('/:id/description', async (req,res) => {
+    try {
+        const transaction = await Transaction.findById(req.params.id);
+        if (!transaction) return res.status(404).send("No transaction found");
+        if (!req.headers["user-id"]) return res.status(400).send("No user id provided");
+        const user_id = req.headers["user-id"];
+        const user = await User.findById(user_id);
+        if (!user) return res.status(404).send("No user found");
+        transaction.description = req.body.description + "- " + user.firstname + " " + user.lastname;
+        const loggedTransaction = await addLogToTransaction(transaction,"Updated Transaction Description", req);
+        const savedTransaction = await loggedTransaction.save();
+        return res.status(200).send(savedTransaction);
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 /**
@@ -267,30 +223,25 @@ router.put('/:id/description', function(req,res) {
  * Requires user's ID in header
  * @param complete {boolean} - if the transaction is complete or not
  */
-router.put('/:id/complete', function(req,res) {
-    Transaction.findById(req.params.id, function(err, transaction) {
-        if(err) return res.status(500).send(err);
+router.put('/:id/complete', async (req,res) => {
+    try {
+        const transaction = await Transaction.findById(req.params.id);
         if(!transaction) return res.status(404).send();
         transaction.complete = req.body.complete;
         transaction.urgent = false;
         if(req.body.complete) {
             transaction.date_completed = Date.now();
         }
-        // change item inventory, and trigger a low stock email if required
-        for (let item of transaction.items){
-            Item.findById(item._id, function(err, found_item) {
-                if (err) return res.status(500).send(err);
-                // raise or lower item stock
-                if(req.body.complete){
-                    found_item.stock -= 1;
-                }else {
-                    found_item.stock += 1;
-                }
-                // save item
-                found_item.save(function (err) {
-                    if (err) return res.status(500).send(err);
-                });
-                // send low stock email if needed
+        // Update item inventory
+        for (let item of transaction.items) {
+            const found_item = await Item.findById(item.item._id);
+            if (req.body.complete) {
+                found_item.stock -= 1;
+            } else {
+                found_item.stock += 1;
+            }
+            await found_item.save();
+            // send low stock email if needed
                 /*
                 Currently disabling this
               if (found_item.stock <= found_item.warning_stock) {
@@ -309,25 +260,14 @@ router.put('/:id/complete', function(req,res) {
                 });
               }
               */
-            });
         }
-        // log this action
-        let description = req.body.complete ? 'Completed Transaction' : 'Reopened Transaction';
-        addLogToTransaction(transaction, req,description, function (err, logged_transaction) {
-            if(err){
-                if(err === 404){
-                    return res.status(404).send('No User found');
-                }else {
-                    return res.status(500).send(err);
-                }
-            }
-            logged_transaction.save(function (err, new_transaction) {
-                if (err) return res.status(500).send(err);
-                res.status(200).send(new_transaction);
-            })
-        })
-
-    });
+        const description = req.body.complete ? 'Completed Transaction' : 'Reopened Transaction';
+        const loggedTransaction = await addLogToTransaction(transaction, req, description);
+        const savedTransaction = await loggedTransaction.save();
+        return res.status(200).send(savedTransaction);
+    } catch (err) {
+        return res.status(500).send(err);
+    }
 });
 
 /**
@@ -335,10 +275,11 @@ router.put('/:id/complete', function(req,res) {
  * Requires user's ID in header
  * @param is_paid - if the transaction is being marked as paid or not
  */
-router.put('/:id/mark_paid',function (req,res) {
-    Transaction.findById(req.params.id, function (err,transaction) {
-        if (err) return res.status(500).send(err);
+router.put('/:id/mark_paid',async (req,res) => {
+    try {
+        const transaction = await Transaction.findById(req.params.id);
         if (req.body.is_paid && !transaction.is_paid) {
+            // Send receipt email
             res.mailer.send('email-receipt', {
                 to: transaction.customer.email,
                 subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
@@ -352,20 +293,12 @@ router.put('/:id/mark_paid',function (req,res) {
         transaction.complete = true;
         // log this action
         let description = req.body.is_paid ? 'Marked Transaction paid' : 'Marked Transaction as waiting';
-        addLogToTransaction(transaction,req,description,function (err, logged_transaction) {
-            if (err) {
-                if (err === 404) {
-                    return res.status(404).send("User not found");
-                } else {
-                    return res.status(500).send(err);
-                }
-            }
-            logged_transaction.save(function (err, new_transaction) {
-                if (err) return res.status(500).send(err);
-                res.status(200).send(new_transaction);
-            });
-        });
-    });
+        const loggedTransaction = await addLogToTransaction(transaction,req, description);
+        const savedTransaction = await loggedTransaction.save();
+        res.status(200).send(savedTransaction);
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 /**
@@ -374,186 +307,109 @@ router.put('/:id/mark_paid',function (req,res) {
  * @param _id - repair id to update
  * @param completed - if repair is complete or not
  */
-router.put('/:id/update_repair', function (req,res) {
-    Transaction.findById(req.params.id, function (err,transaction) {
-            if (err) return res.status(500).send(err);
-            if(!transaction) return res.status(404).send();
-            // update the transaction's repair
-            if (transaction.repairs.length === 0) return res.status(404).send('No repairs associated with this transaction');
-            transaction.repairs.forEach(function (current_repair, idx) {
-                // iterate to find the repair that is completed
-                if( current_repair._id.toString() === req.body._id){
-                    transaction.repairs[idx].completed = req.body.completed;
-                    let description = req.body.completed ? `Completed Repair ${current_repair.repair.name}` : `Opened Repair ${current_repair.repair.name}`;
-                    addLogToTransaction(transaction,req,description,function (err,logged_transaction) {
-                        if (err) {
-                            if (err === 404) {
-                                return res.status(404).send('No user found');
-                            }else {
-                                return res.status(500).send(err);
-                            }
-                        }
-                        logged_transaction.save(function (err, new_transaction) {
-                            if (err) return res.status(500).send(err);
-                            return res.status(200).send(new_transaction);
-                        })
-                    })
-                }
-            });
-        }
-    );
+router.put('/:id/update_repair',async (req,res) => {
+    try {
+        const transaction = await Transaction.findById(req.params.id);
+        if (!transaction) return res.status(404).send();
+        // update the transaction's repair
+        if (transaction.repairs.length === 0) return res.status(404).send('No repairs associated with this transaction');
+        transaction.repairs.forEach(async function (current_repair, idx) {
+            // iterate to find the repair that is completed
+            if (current_repair._id.toString() === req.body._id) {
+                transaction.repairs[idx].completed = req.body.completed;
+                let description = req.body.completed ? `Completed Repair ${current_repair.repair.name}` : `Opened Repair ${current_repair.repair.name}`;
+                const loggedTransaction = await addLogToTransaction(transaction, req, description);
+                const savedTransaction = await loggedTransaction.save();
+                return res.status(200).send(savedTransaction);
+            }
+        });
+    } catch (err) {
+        return res.status(500).send(err);
+    }
 });
 
 
 
-/*
-Updates a single transaction - "PUT /transactions/:id"
+/**
+    Updates a single transaction - "PUT /transactions/:id"
+    This endpoint handles updates such as marking a transaction urgent, waiting on a part, or waiting on email.
+    DO NOT USE THIS ENDPOINT FOR NEW FEATURES
  */
-router.put('/:id', function (req, res) {
-    Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500).send(err);
+router.put('/:id', async (req, res) => {
+    try {
+        let transaction = await Transaction.findById(req.params.id);
         if (!transaction) return res.status(404).send();
-
-        let date = moment().format('MMMM Do YYYY, h:mm:ss a');
-        // if the bike coming in has just been completed, decrement the inventory of the items on the transaction
-        if (!transaction.complete && req.body.complete) {
-            for (let item of req.body.items) {
-                Item.findById(item._id, function (err, found_item) {
-                    if (err) return res.status(500).send(err);
-                    //lower the item inventory
-                    found_item.stock -= 1;
-                    /*
-                    // if inventory drops below warning value, send an alert email (currently disabled)
-                    if (found_item.stock <= found_item.warning_stock) {
-                      // send an alert email to any user with the operations role
-                      User.find({roles:'operations'},function (err, user_array) {
-                        for (user of user_array){
-                            let email = user.username+'@rice.edu';
-                            res.mailer.send('email-lowstock',{
-                              to:email,
-                              subject: `Low Stock Alert - ${found_item.name}`,
-                              name:user.username,
-                              item:found_item
-                            }, function (err) {
-                              if(err) console.log(err);
-                            });
-                        }
-                      })
-                    }
-                    */
-                    found_item.save(function (err, new_item) {
-                        console.log(new_item);
-                        if (err) return res.status(500).send(err);
-                        if (!transaction.is_paid && req.body.is_paid) {
-                            res.mailer.send('email-receipt', {
-                                to: transaction.customer.email,
-                                subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
-                                transaction: transaction,
-                                date: date
-                            }, function (err) {
-                                if (err) return res.status(500);
-                            });
-                        }
-                    });
-                });
-            }
-        }
-        // in addition, make sure that if a bike is re-opened stock is raised
-        else if (transaction.complete && !req.body.complete) {
-            for (let item of req.body.items) {
-                Item.findById(item._id, function (err, found_item) {
-                    if (err) return res.status(500).send(err);
-                    //lower the item inventory
-                    found_item.stock += 1;
-                    found_item.save(function (err) {
-                        if (err) return res.status(500).send(err);
-
-                    })
-                });
-            }
-        }
-        // if the bike coming in has just been paid (it was just completed), send receipt email
-        if (!transaction.is_paid && req.body.is_paid) {
-            res.mailer.send('email-receipt', {
-                to: transaction.customer.email,
-                subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
-                transaction: transaction,
-                date: date
-            }, function (err) {
-                if (err) return res.status(500);
-                //res.status(200).send('OK');
-            });
-        }
-        console.log(transaction);
-        transaction = _.extend(transaction, req.body);
-        transaction.save(function (err, transaction_new) {
-            if (err) return res.status(500).send(err);
-            res.status(200).send(transaction_new);
-        });
-    })
+        // Only update the fields that this function is meant to handle
+        // This function is being phased out in favor of individual endpoints for each element of transaction
+        transaction.waiting_email = req.body.waiting_email;
+        transaction.waiting_part = req.body.waiting_part;
+        transaction.urgent = req.body.waiting_part;
+        transaction.refurb = req.body.refurb;
+        transaction.transaction_type = req.body.transaction_type;
+        const savedTransaction = await transaction.save();
+        return res.status(200).send(savedTransaction);
+    } catch (err) {
+        return res.status(500).send(err);
+    }
 });
 
 
 /*
 Deletes a single transaction - "DELETE /transactions/:id"
  */
-router.delete('/:id', function (req, res) {
-    Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500);
+router.delete('/:id', async (req, res) => {
+    try {
+        const transaction = Transaction.findById(req.params.id);
         if (!transaction) return res.status(404).send("No transaction found.");
-        transaction.remove(function (err) {
-            if (err) return res.status(500);
-        });
+        await transaction.remove();
         res.status(200).send("OK");
-    })
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 /*
 Posts a bike to a transaction - "POST /transactions/:id/bikes"
  */
-router.post('/:id/bikes', function (req, res) {
-    Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500);
+router.post('/:id/bikes', async (req, res) => {
+    try {
+        const transaction = await Transaction.findById(req.params.id);
         if (!transaction) return res.status(404);
+        let bike;
         if (req.body._id) {
-            Bike.findById(req.body._id, function (err, bike) {
-                if (!bike) return res.status(404).send("No bike found");
-                transaction.bikes.push(bike);
-                transaction.save();
-            });
-            res.status(200).send(transaction);
+            bike = await Bike.findById(req.body.id);
+            if (!bike) return res.status(404).send("No bike found");
         } else {
-            Bike.create({
-                    make: req.body.make,
-                    model: req.body.model,
-                    description: req.body.description
-                },
-                function (err, bike) {
-                    if (err) return res.status(500);
-                    transaction.bikes.push(bike);
-                    transaction.save(function (err, transaction) {
-                        res.status(200).send(transaction);
-                    });
-                });
+           bike = await Bike.create({
+               make: req.body.make,
+               model: req.body.model,
+               description: req.body.description
+           });
         }
-    });
+        transaction.bikes.push(bike);
+        let finalTransaction = await transaction.save();
+        return res.status(200).send(finalTransaction);
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 
-/*
+/**
 Deletes a bike from the transaction - "DELETE /transactions/:id/bikes/:bike_id"
  */
-router.delete('/:id/bikes/:bike_id', function (req, res) {
-    Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500);
+router.delete('/:id/bikes/:bike_id', async (req, res) => {
+    try {
+        const transaction = await Transaction.findById(req.params.id);
         if (!transaction) return res.status(404);
         transaction.bikes.splice(transaction.bikes.find(function (b) {
             return req.params.bike_id
         }), 1);
-        transaction.save(function (err, transaction) {
-            res.status(200).send(transaction);
-        });
-    })
+        const finalTransaction = await transaction.save();
+        res.status(200).send(finalTransaction);
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 
@@ -577,6 +433,7 @@ router.post('/:id/items', async (req, res) => {
         }
         transaction.total_cost+= newItem.price;
         transaction.items.push(newItem);
+        await transaction.save();
         /*  Rice Bikes did not tax before Wednesday, January 29th 2020 */
         if (transaction.date_created > config.tax.cutoff_date) {
             // apply tax to the transaction
@@ -596,22 +453,9 @@ router.post('/:id/items', async (req, res) => {
             console.log(transaction.items);
             transaction.total_cost += calculated_tax.price;
         }
-        addLogToTransaction(transaction,
-            req,
-            `Added Item ${item.name}`,
-            function (err, logged_transaction) {
-                if (err) {
-                    if (err === 404) {
-                        return res.status(404).send();
-                    } else {
-                        return res.status(500).send();
-                    }
-                }
-                logged_transaction.save(function (err, new_transaction) {
-                    if (err) return res.status(500).send(err);
-                    return res.status(200).send(new_transaction);
-                });
-            });
+        const loggedTransaction = await addLogToTransaction(transaction, req, `Added Item ${item.name}`);
+        const finalTransaction = await loggedTransaction.save();
+        res.status(200).send(finalTransaction);
     } catch (err){
         res.status(500).send(err);
     }
@@ -622,9 +466,9 @@ router.post('/:id/items', async (req, res) => {
  * Requires user's ID in header
  * Deletes an item from a transaction - DELETE /transactions/$id/items
  */
-router.delete('/:id/items/:item_id', function (req, res) {
-    Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500);
+router.delete('/:id/items/:item_id', async (req, res) => {
+    try {
+        let transaction = await Transaction.findById(req.params.id);
         if (!transaction) return res.status(404);
         let action_description;
         for (let i = 0; i < transaction.items.length; i++) {
@@ -638,20 +482,12 @@ router.delete('/:id/items/:item_id', function (req, res) {
                 break;
             }
         }
-        addLogToTransaction(transaction, req, action_description, function (err, logged_transaction) {
-            if (err) {
-                if (err === 404) {
-                    return res.status(404).send('No User found');
-                } else {
-                    return res.status(500).send(err);
-                }
-            }
-            logged_transaction.save(function (err, new_transaction) {
-                if (err) return res.status(500).send();
-                return res.status(200).send(new_transaction);
-            });
-        });
-    })
+        let loggedTransaction = await addLogToTransaction(transaction, req, action_description);
+        let savedTransaction = await loggedTransaction.save();
+        res.status(200).send(savedTransaction);
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 
@@ -660,31 +496,22 @@ router.delete('/:id/items/:item_id', function (req, res) {
  @ param _id : repair id to add
  @ param user : user object performing this change
  */
-router.post('/:id/repairs', function (req, res) {
-    Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500);
-        if (!transaction) return res.status(404);
-        Repair.findById(req.body._id, function (err, repair) {
-            if (err) return res.status(500);
-            if (!repair) return res.status(404);
-            var rep = {"repair": repair, "completed": false};
-            transaction.repairs.push(rep);
-            transaction.total_cost += repair.price;
-            addLogToTransaction(transaction,req,`Added repair ${repair.name}`,function (err, logged_transaction) {
-                if(err){
-                    if(err ===404){
-                        return res.status(404).send('No user found');
-                    }else{
-                        return res.status(500).send(err);
-                    }
-                }
-                logged_transaction.save(function (err, new_transaction) {
-                    if(err) return res.status(500).send(err);
-                    return res.status(200).send(new_transaction);
-                })
-            });
-        })
-    })
+router.post('/:id/repairs', async (req, res) => {
+    try {
+        let transaction = await Transaction.findById(req.params.id);
+        if (!transaction) return res.status(404).send("No transaction");
+        if (!req.body._id) return res.status(400).send("No repair to add");
+        let repair = await Repair.findById(req.body._id);
+        if (!repair) return res.status(404);
+        let rep = {"repair": repair, "completed": false};
+        transaction.repairs.push(rep);
+        transaction.total_cost += repair.price;
+        let loggedTransaction = await addLogToTransaction(transaction, req, `Added repair ${repair.name}`);
+        let savedTransaction = await loggedTransaction.save();
+        res.status(200).send(savedTransaction);
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 /**
@@ -715,9 +542,9 @@ router.get('/:id/upgrade', async (req, res) => {
  * Requires user ID in header
  * Deletes repair from transaction
  */
-router.delete('/:id/repairs/:repair_id', function (req, res) {
-    Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500);
+router.delete('/:id/repairs/:repair_id', async (req, res) => {
+    try {
+        let transaction = await Transaction.findById(req.params.id);
         if (!transaction) return res.status(404);
         let description = '';
         transaction.repairs = transaction.repairs.filter(function (rep) {
@@ -727,30 +554,21 @@ router.delete('/:id/repairs/:repair_id', function (req, res) {
                 return false;
             } else return true;
         });
-        addLogToTransaction(transaction,req,description, function (err, logged_transaction) {
-            if(err){
-                if(err ===404){
-                    return res.status(404).send('No user found');
-                }else{
-                    return res.status(500).send(err);
-                }
-            }
-            logged_transaction.save(function (err, new_transaction) {
-                if(err) return res.status(500).send(err);
-                return res.status(200).send(new_transaction);
-            });
-        });
-    });
+        let loggedTransaction = addLogToTransaction(transaction, req, description);
+        let savedTransaction = loggedTransaction.save();
+        res.status(200).send(savedTransaction);
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 /*
  Email handler
  */
-router.get('/:id/email-notify', function (req, res) {
-    Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500);
+router.get('/:id/email-notify', async (req, res) => {
+    try {
+        let transaction = await Transaction.findById(req.params.id);
         if (!transaction) return res.status(404);
-
         res.mailer.send('email-notify-ready', {
             to: transaction.customer.email,
             subject: `Rice Bikes - your bike is ready - ${transaction._id}`,
@@ -759,12 +577,14 @@ router.get('/:id/email-notify', function (req, res) {
             if (err) return res.status(500);
             res.status(200).send('OK');
         });
-    });
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
-router.get('/:id/email-receipt', function (req, res) {
-    Transaction.findById(req.params.id, function (err, transaction) {
-        if (err) return res.status(500);
+router.get('/:id/email-receipt', async (req, res) => {
+    try {
+        let transaction = await Transaction.findById(req.params.id);
         if (!transaction) return res.status(404);
         res.mailer.send('email-receipt', {
             to: transaction.customer.email,
@@ -774,7 +594,9 @@ router.get('/:id/email-receipt', function (req, res) {
             if (err) return res.status(500);
             res.status(200).send('OK');
         })
-    });
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 module.exports = router;
