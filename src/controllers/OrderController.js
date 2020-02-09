@@ -36,6 +36,20 @@ router.get('/', function (req, res) {
     res.redirect("./daterange");
 });
 
+/**
+ * GET /:id: get a specific order by its ID
+ */
+router.get('/:id', async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).send("No order found");
+        res.status(200).send(order);
+    } catch (err) {
+        res.status(500).send(err);
+    }
+
+});
+
 // require admin permissions to use the below endpoints
 router.use(adminMiddleware);
 
