@@ -9,9 +9,9 @@ var OrderSchema = new mongoose.Schema({
         quantity: Number, transaction: {type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', required: false}}]
 });
 // auto populate item list when querying orders
+// avoid autopopulating transaction
 var autoPopulate = function (next) {
     this.populate('items.item');
-    this.populate('items.transaction');
     next();
 };
 
