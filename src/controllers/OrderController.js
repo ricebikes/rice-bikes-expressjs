@@ -163,7 +163,7 @@ router.post('/:id/item', async (req, res) => {
 });
 
 /**
- * POST /:id/item/:itemId/stock
+ * PUT /:id/item/:itemId/stock
  * updates the quantity of an item in an order
  * put body:
  * {
