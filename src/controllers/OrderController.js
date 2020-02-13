@@ -158,8 +158,9 @@ router.put('/:id/supplier', async  (req, res) => {
 router.post('/:id/item', async (req, res) => {
     try {
         if (!req.body.item) return res.status(400).send("No item specified");
-        if (!req.body.item.item ||
-            !req.body.item.quantity) return res.status(400).send("Malformed item");
+        console.log(req.body.item)
+        if (!req.body.item.item) return res.status(400).send("No item associated with order item");
+        if (req.body.item.quantity == null) return res.status(400).send("No quantity associated with order item");
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
         // check if the item is already in the order
