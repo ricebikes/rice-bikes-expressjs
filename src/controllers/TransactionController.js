@@ -251,6 +251,8 @@ router.put('/:id/complete', function(req,res) {
     if(!transaction) return res.status(404).send();
     transaction.complete = req.body.complete;
     transaction.urgent = false;
+    transaction.waiting_email = false;
+    transaction.waiting_part = false;
     if(req.body.complete) {
       transaction.date_completed = Date.now();
     }
@@ -572,7 +574,7 @@ router.post('/:id/items', function (req, res) {
           transaction.items.push(item);
           if (employee && item.shop_cost && item.shop_cost != 0) {
             // employee pricing
-            let multiplier_over_wholesale = 1.15;
+            let multiplier_over_wholesale = 1.10;
             transaction.total_cost += Math.ceil(item.shop_cost * multiplier_over_wholesale);
           } else {
               transaction.total_cost += item.price;
