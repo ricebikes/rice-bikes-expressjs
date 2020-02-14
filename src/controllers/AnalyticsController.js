@@ -45,8 +45,8 @@ router.get('/transactions/daterange', async (req, res) => {
         const projection = {_id: 1, date_created: 1, date_completed: 1, total_cost: 1}; // only return these fields
         const query = {date_completed: {$gt: dates.start, $lt: dates.end}};
         const transactionsStream = Transaction.find(query, projection).cursor();
-        const startString = moment(dates.start).format("MM/DD/YYYY"); // date formatting for nice filename
-        const endString = moment(dates.end).format("MM/DD/YYYY"); // date formatting for nice filename
+        const startString = moment(dates.start).format("MM-DD-YYYY"); // date formatting for nice filename
+        const endString = moment(dates.end).format("MM-DD-YYYY"); // date formatting for nice filename
         const filename = `Transactions_${startString}-${endString}.csv`;
         // transformer function lets us extract relevant transaction data for CSV sheet
         const transformer = function(input_transaction) {
@@ -89,8 +89,8 @@ router.get('/employees/groupmetrics', async (req, res) => {
        const projection = {actions: 1}; // only return these fields
        const query = {date_created: {$gt: dates.start, $lt: dates.end}};
        const transactions = await Transaction.find(query, projection);
-       const startString = moment(dates.start).format("MM/DD/YYYY"); // date formatting for nice filename
-       const endString = moment(dates.end).format("MM/DD/YYYY"); // date formatting for nice filename
+       const startString = moment(dates.start).format("MM-DD-YYYY"); // date formatting for nice filename
+       const endString = moment(dates.end).format("MM-DD-YYYY"); // date formatting for nice filename
        const filename = `All_Employee_Metrics_${startString}-${endString}.csv`;
        // iterate through transactions so that we can count actions of each employee
        let employeeActions = {};
