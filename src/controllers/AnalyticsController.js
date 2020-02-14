@@ -59,6 +59,8 @@ router.get('/transactions/daterange', async (req, res) => {
         };
         // set headers so that client knows content type
         res.setHeader('Content-disposition', `attachment; filename=${filename}`);
+        // lets client view the content-disposition header with the filename
+        res.setHeader('Access-Control-Expose-Headers', 'Content-disposition');
         res.writeHead(200, { 'Content-Type': 'text/csv' });
         // flush the headers before we start pushing the CSV content (to write the ones we have set)
         res.flushHeaders();

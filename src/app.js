@@ -41,7 +41,7 @@ mailer.extend(app, {
 });
 
 /* Register routes */
-app.use('/api/analytics', AnalyticsController);
+app.use('/api/metrics', AnalyticsController); // do not use analytics as endpoint, firefox has bug
 app.use('/api/auth', AuthController);
 app.use('/api/users', UserController);
 app.use('/api/transactions', TransactionController);
