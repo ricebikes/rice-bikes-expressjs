@@ -622,7 +622,7 @@ router.delete('/:id/items/:item_id', function (req, res) {
             let item = transaction.items[i];
             if (item._id == req.params.item_id) {
                 if (employee && item.shop_cost && item.shop_cost != 0) {
-                    let multiplier_over_wholesale = 1.15;
+                    let multiplier_over_wholesale = 1.10;
                     transaction.total_cost -= Math.ceil(item.shop_cost * multiplier_over_wholesale);
                 } else {
                     transaction.total_cost -= item.price;
