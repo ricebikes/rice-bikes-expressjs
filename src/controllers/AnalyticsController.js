@@ -1,4 +1,4 @@
-var express = require('express');
+const express = require('express');
 /* Wrap our router in our auth protocol */
 const router = express.Router();
 const authMiddleware = require('../middleware/AuthMiddleware');
@@ -51,10 +51,10 @@ router.get('/transactions/daterange', async (req, res) => {
         // transformer function lets us extract relevant transaction data for CSV sheet
         const transformer = function(input_transaction) {
             return {
-                  Number: input_transaction._id,
-                 "Date Created": input_transaction.date_created,
-                 "Date Completed": input_transaction.date_completed,
-                 "Total Cost": input_transaction.total_cost
+                  "Number": input_transaction._id,
+                 "Date-Created": moment(input_transaction.date_created).format('MM/DD/YYYY HH:mm:ss'),
+                 "Date-Completed": moment(input_transaction.date_completed).format('MM/DD/YYYY HH:mm:ss'),
+                 "Total-Cost": input_transaction.total_cost
             };
         };
         // set headers so that client knows content type
