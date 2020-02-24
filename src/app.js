@@ -6,13 +6,14 @@ var mailer = require('express-mailer');
 var config = require('./config')();
 var db = require('./db');
 
-var AuthController = require('./controllers/AuthController');
-var UserController = require('./controllers/UserController');
-var TransactionController = require('./controllers/TransactionController');
-var RepairController = require('./controllers/RepairController');
-var ItemController = require('./controllers/ItemController');
-var CustomerController = require('./controllers/CustomerController');
-let OrderController = require('./controllers/OrderController');
+const AnalyticsController = require('./controllers/AnalyticsController');
+const AuthController = require('./controllers/AuthController');
+const UserController = require('./controllers/UserController');
+const TransactionController = require('./controllers/TransactionController');
+const RepairController = require('./controllers/RepairController');
+const ItemController = require('./controllers/ItemController');
+const CustomerController = require('./controllers/CustomerController');
+const OrderController = require('./controllers/OrderController');
 
 /* Create app */
 var app = express();
@@ -41,6 +42,7 @@ mailer.extend(app, {
 });
 
 /* Register routes */
+app.use('/api/metrics', AnalyticsController); // do not use analytics as endpoint, firefox has bug
 app.use('/api/auth', AuthController);
 app.use('/api/users', UserController);
 app.use('/api/transactions', TransactionController);
