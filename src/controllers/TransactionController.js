@@ -558,7 +558,6 @@ router.get('/:id/upgrade', async (req, res) => {
   // It expects an instance of the database that works perfectly with the current master branch
   // This means the database should not be updated for the POS system in any way before this script runs
   console.log("Upgrade triggered");
-  console.log("Rename Item DB fields");
   try {
     await Item.update({},
         {$rename:{
@@ -578,6 +577,7 @@ router.get('/:id/upgrade', async (req, res) => {
       console.log("Upgrading item structures");
       let transactions = await Transaction.find();
       for (let transaction of transactions) {
+          console.log(transaction._id);
           let newItems = [];
           for (let item of transaction.items) {
               newItems.push({item: item, price: item.standard_price});
