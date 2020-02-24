@@ -559,6 +559,8 @@ router.get('/:id/upgrade', async (req, res) => {
   // This means the database should not be updated for the POS system in any way before this script runs
   console.log("Upgrade triggered");
   try {
+    /*
+    // simple rename command. Run this from command line.
     await Item.update({},
         {$rename:{
                 price: "standard_price",
@@ -567,6 +569,7 @@ router.get('/:id/upgrade', async (req, res) => {
                 warning_quantity: "desired_stock"
             }}, {upsert: false, multi: true});
     // Set conditions to "New"
+    */
     console.log("Setting condition to New and Hidden to false");
     await Item.update({},
         {$set:{condition: "New"}}, {upsert: false, multi: true});
@@ -574,6 +577,12 @@ router.get('/:id/upgrade', async (req, res) => {
     await Item.update({},
         {$set:{hidden: false}}, {upsert: false, multi: true});
     // Change item structure in transactions collection
+      // here, add a newItems field to the Transactions Model when you run this.
+      // this is the only thing that should be run as an endpoint.
+      /*
+      *MAKE SURE YOU update the model for transactions here, mostly revert the autopopulate function
+      *to older POS version
+      */
       console.log("Upgrading item structures");
       let transactions = await Transaction.find();
       for (let transaction of transactions) {
@@ -585,7 +594,8 @@ router.get('/:id/upgrade', async (req, res) => {
           transaction.newItems = newItems;
           await transaction.save();
       }
-      res.status(200).send("Upgrade performed");
+      res.status(200).send("Upgrade performed. Run the item rename command from the commandline \n"
+      + "Then, drop the items entry from transactions and rename the transaction newItems entry to items);
   }catch (err) {
       res.status(500).send(err);
   }
