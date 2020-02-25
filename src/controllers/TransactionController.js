@@ -153,14 +153,13 @@ async function addLogToTransaction(transaction, req, description) {
 }
 
 /**
- * Convenience function to round to two decimal places
- * @param num - number to round
- * @return {Number} number rounded to two decimal places
+ * Convenience function to truncate to two decimal places
+ * @param num - number to truncate
+ * @return {Number} number truncated to two decimal places
  */
-function round2(num) {
-    const round = Math.round( num * 100 + Number.EPSILON ) / 100
-    console.log(num + " Rounded to " + round);
-    return round;
+function truncate2 (num) {
+    const str = num.toFixed(2);
+    return parseFloat(str);
 }
 
 /**
@@ -183,13 +182,13 @@ async function calculateTax(transaction) {
         });
         const tax_item = await Item.findOne({name : config.tax.DBname});
         let calculated_tax = {item: tax_item,
-            price: round2(transaction.total_cost * config.tax.rate)};
+            price: truncate2(transaction.total_cost * config.tax.rate)};
         // round off the tax value
         if (calculated_tax.price > Number.EPSILON) {
             // Tax is nonzero, add a tax item
             transaction.items.push(calculated_tax);
         }
-        transaction.total_cost = round2(transaction.total_cost + calculated_tax.price);
+        transaction.total_cost = truncate2(transaction.total_cost + calculated_tax.price);
         return transaction;
         }
     } catch (err) {
