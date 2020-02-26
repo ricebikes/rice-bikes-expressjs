@@ -593,8 +593,8 @@ router.get('/:id/upgrade', async (req, res) => {
           transaction.newItems = newItems;
           await transaction.save();
       }
-      res.status(200).send("Upgrade performed. Run the item rename command from the commandline \n"
-      + "Then, drop the items entry from transactions and rename the transaction newItems entry to items);
+      res.status(200).send("Upgrade performed. Run the item rename command from the commandline \n" + 
+      "Then, drop the items entry from transactions and rename the transaction newItems entry to items");
   }catch (err) {
       res.status(500).send(err);
   }
