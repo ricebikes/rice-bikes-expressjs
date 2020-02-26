@@ -10,7 +10,8 @@ var ItemSchema = new mongoose.Schema({
     condition: {type: String, default: "New"},
     standard_price: {type: Number, required: true},
     wholesale_cost: Number,
-    hidden: {type: Boolean, default: false},
+    disabled: {type: Boolean, default: false},
+    managed: {type: Boolean, default: false},
     desired_stock: {type: Number, required: true},
     stock: {type: Number, default: 0},
 });

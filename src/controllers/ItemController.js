@@ -62,8 +62,8 @@ router.get('/search', function (req, res) {
         category: req.query.category,
         upc: req.query.upc,
         condition: req.query.condition,
-        // explicitly disable showing hidden items
-        hidden: false
+        // explicitly disable showing disabled items
+        disabled: false
     };
     // if our query defines a name, add that here. Required since the name portion uses indexed searching (for speed)
     if (req.query.name) {
@@ -106,9 +106,9 @@ router.post('/', function (req, res) {
         && name
         && category
         && brand
-        && standard_price
-        && wholesale_cost
-        && desired_stock)){
+        && (standard_price != undefined)
+        && (wholesale_cost != undefined)
+        && (desired_stock != undefined))){
         return res.status(400).send("Malformed request, missing fields");
     }
     Item.create({
@@ -119,7 +119,8 @@ router.post('/', function (req, res) {
         condition: condition,
         standard_price: standard_price,
         wholesale_cost: wholesale_cost,
-        hidden: false,
+        disabled: false,
+        managed: false,
         desired_stock: desired_stock,
         stock: 0
     }, function (err, item) {
@@ -128,7 +129,9 @@ router.post('/', function (req, res) {
     })
 });
 
-// let an item be updated
+/**
+ * Lets an item be updated. Simply overwrites the current item with whatever is sent.
+ */
 router.put('/:id', function (req, res) {
     {
         Item.findByIdAndUpdate(req.params.id, req.body, {new: true}, function (err, item) {
@@ -139,9 +142,12 @@ router.put('/:id', function (req, res) {
     }
 });
 
-// get item list
+/**
+ * Gets all items from the backend. Notably, will NOT return managed items. These items are handled exclusively on the
+ * backend, and removing or adding one to a transaction should not be possible.
+ */
 router.get('/', function (req, res) {
-    Item.find({}, function (err, items) {
+    Item.find({managed: false}, function (err, items) {
         if (err) return res.status(500).send(err);
         return res.status(200).send(items);
     });

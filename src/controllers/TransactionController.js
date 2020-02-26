@@ -502,8 +502,8 @@ router.delete('/:id/items/:item_id', async (req, res) => {
         for (let i = 0; i < transaction.items.length; i++) {
             let item = transaction.items[i].item;
             if (item._id.toString() === req.params.item_id) {
-                // If the item is hidden, deny the user from removing it
-                if (item.hidden) return res.status(403).send("Cannot delete hidden item");
+                // If the item is managed, deny the user from removing it
+                if (item.managed) return res.status(403).send("Cannot delete this type of item");
                 // decrease total_cost
                 transaction.total_cost-= transaction.items[i].price;
                 // simply delete the item by splicing it from the item list
@@ -572,9 +572,9 @@ router.get('/:id/upgrade', async (req, res) => {
     console.log("Setting condition to New and Hidden to false");
     await Item.update({},
         {$set:{condition: "New"}}, {upsert: false, multi: true});
-    // Set hidden to false
+    // Set disabled and managed to false
     await Item.update({},
-        {$set:{hidden: false}}, {upsert: false, multi: true});
+        {$set:{disabled: false, managed: false}}, {upsert: false, multi: true});
     // Change item structure in transactions collection
       // here, add a newItems field to the Transactions Model when you run this.
       // this is the only thing that should be run as an endpoint.
