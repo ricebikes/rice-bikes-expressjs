@@ -28,4 +28,5 @@ while (cursor.hasNext()) {
     // overwrite the current items for the transaction
     db.transactions.update({_id:transaction._id},{$set:{items: newItems}})
 }
-
+// create a "tax" item
+db.items.insert({name:"Sales Tax", standard_price:0, disabled:false, managed:true});
