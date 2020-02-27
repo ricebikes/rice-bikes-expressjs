@@ -547,59 +547,6 @@ router.post('/:id/repairs', async (req, res) => {
 });
 
 /**
- * TEMPORARY method
- * TODO: delete this method
- * Upgrades the database to work with new POS fields and definitions
- */
-router.get('/:id/upgrade', async (req, res) => {
-
-  // This script upgrades the database to use the latest structure for items and transactions.
-  // It expects an instance of the database that works perfectly with the current master branch
-  // This means the database should not be updated for the POS system in any way before this script runs
-  console.log("Upgrade triggered");
-  try {
-    /*
-    // simple rename command. Run this from command line.
-    await Item.update({},
-        {$rename:{
-                price: "standard_price",
-                quantity: "stock",
-                shop_cost: "wholesale_cost",
-                warning_quantity: "desired_stock"
-            }}, {upsert: false, multi: true});
-    // Set conditions to "New"
-    */
-    console.log("Setting condition to New and Hidden to false");
-    await Item.update({},
-        {$set:{condition: "New"}}, {upsert: false, multi: true});
-    // Set disabled and managed to false
-    await Item.update({},
-        {$set:{disabled: false, managed: false}}, {upsert: false, multi: true});
-    // Change item structure in transactions collection
-      // here, add a newItems field to the Transactions Model when you run this.
-      // this is the only thing that should be run as an endpoint.
-      /*
-      *MAKE SURE YOU update the model for transactions here, mostly revert the autopopulate function
-      *to older POS version
-      */
-      console.log("Upgrading item structures");
-      let transactions = await Transaction.find();
-      for (let transaction of transactions) {
-          console.log(transaction._id);
-          let newItems = [];
-          for (let item of transaction.items) {
-              newItems.push({item: item, price: item.standard_price});
-          }
-          transaction.newItems = newItems;
-          await transaction.save();
-      }
-      res.status(200).send("Upgrade performed. Run the item rename command from the commandline \n" + 
-      "Then, drop the items entry from transactions and rename the transaction newItems entry to items");
-  }catch (err) {
-      res.status(500).send(err);
-  }
-});
-/**
  * Requires user ID in header
  * Deletes repair from transaction
  */
