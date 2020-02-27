@@ -5,7 +5,7 @@ db = conn.getDB("bikes");
 
 // run the item update queries
 print("Updating items")
-db.items.update({},{$set:{managed:false,disabled:false}},false,true);
+db.items.update({},{$set:{managed:false,disabled:false,condition:"New"}},false,true);
 db.items.update({},{$rename:{price:"standard_price",
                     quantity:"stock",
                     warning_quantity:"desired_stock",
