@@ -100,7 +100,7 @@ router.use(adminMiddleware);
  */
 // adds an item to the db. Note that quantity should start at 0
 router.post('/', function (req, res) {
-    const {name, upc, category, brand, condition, standard_price, wholesale_cost, desired_stock} = req.body;
+    const {name, upc, category, size, brand, condition, standard_price, wholesale_cost, desired_stock} = req.body;
     // validate the request before proceeding
     if (!((condition === 'Used' || upc)
         && name
@@ -115,6 +115,7 @@ router.post('/', function (req, res) {
         name: name,
         upc: upc,
         category: category,
+        size: size,
         brand: brand,
         condition: condition,
         standard_price: standard_price,
