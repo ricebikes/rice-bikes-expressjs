@@ -163,11 +163,14 @@ router.post('/:id/item', async (req, res) => {
         if (req.body.item.quantity == null) return res.status(400).send("No quantity associated with order item");
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
+        /*
+        Disabling this check for now. Don't feel it's a useful feature.
         // check if the item is already in the order
         let itemInOrder = order.items.reduce((itemFound, currentItem) =>
                             itemFound || (currentItem.item._id.toString() === req.body.item.item._id),
                             false);
         if (itemInOrder) return res.status(403).send("Item is already in order");
+        */
         const item = await resolveItem(req.body.item);
         // add item as first in order
         order.items.unshift(item);

@@ -75,7 +75,6 @@ router.get('/search', function (req, res) {
         // if query object is empty, return an empty array rather than searching
         return res.status(200).send([]);
     }
-    console.log(query_object);
     Item.find(query_object, function (err, items) {
         if (err) return res.status(500).send(err);
         res.status(200).send(items);
