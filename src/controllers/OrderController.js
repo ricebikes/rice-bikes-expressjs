@@ -288,6 +288,8 @@ router.delete('/:id', async (req, res) => {
 
 /**
  * PUT /:id/status: updates an order's status
+ * If the order is completed, date_completed will be set
+ * If the order is Ordered, date_submitted will be set
  * put body:
  * {
  *     status: new status string of the order
@@ -298,10 +300,18 @@ router.put('/:id/status', async  (req, res) => {
         if (!req.body.status) return res.status(400).send("No status specified");
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
+        if (req.body.status === "In Cart") {
+            // clear out the submission date and completion date
+            order.date_completed = null;
+            order.date_submitted = null;
+        }
         if (req.body.status === "Ordered") {
             order.date_submitted = new Date(); // order was just submitted
+            order.date_completed = null; // clear this out to prevent undefined state
         }
         if (req.body.status === "Completed" && order.status !== "Completed") {
+            // set date_completed
+            order.date_completed = new Date();
             // update item stocks
             const promises = order.items.map(item => updateItemStock(item.item._id, item.quantity));
             await Promise.all(promises);    // await for all promises to resolve
