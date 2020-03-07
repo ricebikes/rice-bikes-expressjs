@@ -95,6 +95,7 @@ var search = function (str, query) {
         return false;
     }
 };
+
 /*
 Searches transactions by date they were completed
  */
@@ -126,6 +127,7 @@ router.get('/searchByDate/:dates', function (req, res) {
 
 
 });
+
 /**
  * Helper function to add logs to transactions. MODIFIES input transaction
  * @param transaction - transaction object from mongoose
@@ -161,6 +163,8 @@ function truncate2 (num) {
     const str = num.toFixed(2);
     return parseFloat(str);
 }
+
+
 
 /**
  * Adds tax to a transaction, or updates it
@@ -223,6 +227,19 @@ router.get('/search', function (req, res) {
     })
 });
 
+
+/**
+ * GET: /ids
+ * Gets all transaction IDs. Useful for searching.
+ */
+router.get('/ids', async (req, res) => {
+   try {
+       const distinct = await Transaction.distinct("_id");
+       return  res.status(200).send(distinct);
+   } catch (err) {
+      res.status(500).send(err);
+   }
+});
 
 /*
 Gets a single transaction - "GET /transactions/:id"

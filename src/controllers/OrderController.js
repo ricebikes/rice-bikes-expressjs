@@ -107,7 +107,7 @@ router.post('/',async (req, res) => {
  * used when an order is marked as completed, to increase stock of items in database
  * @param itemID: ID of Item to update stock of
  * @param quantity: quantity of item that has been shipped
- * @return {Promise<void>}
+ * @return {Promise<orderItem>}
  */
 async function updateItemStock(itemID, quantity) {
     // not using try/catch because we want errors to be caught by callers
@@ -121,6 +121,7 @@ async function updateItemStock(itemID, quantity) {
     if (!restockedItem) {
         throw {err: "Failed to save new stock state of item"};
     }
+    return restockedItem;
 }
 
 /**
@@ -163,14 +164,11 @@ router.post('/:id/item', async (req, res) => {
         if (req.body.item.quantity == null) return res.status(400).send("No quantity associated with order item");
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
-        /*
-        Disabling this check for now. Don't feel it's a useful feature.
         // check if the item is already in the order
         let itemInOrder = order.items.reduce((itemFound, currentItem) =>
                             itemFound || (currentItem.item._id.toString() === req.body.item.item._id),
                             false);
         if (itemInOrder) return res.status(403).send("Item is already in order");
-        */
         const item = await resolveItem(req.body.item);
         // add item as first in order
         order.items.unshift(item);
@@ -315,14 +313,16 @@ router.put('/:id/status', async  (req, res) => {
             // update item stocks
             const promises = order.items.map(item => updateItemStock(item.item._id, item.quantity));
             await Promise.all(promises);    // await for all promises to resolve
-        } else if (req.body.status !== "Completed" && order.status == "Completed") {
+        } else if (req.body.status !== "Completed" && order.status === "Completed") {
             // decrease item stocks
             const promises = order.items.map(item => updateItemStock(item.item._id, -1 * item.quantity));
             await Promise.all(promises);    // await for all promises to resolve
         }
         order.status = req.body.status;
         const savedOrder = await order.save();
-        return res.status(200).send(savedOrder);
+        // Find the order again here. The additional query forces the new item stocks to populate.
+        const final = await Order.findById(savedOrder._id);
+        return res.status(200).send(final);
     } catch (err) {
         res.status(500).send(err);
     }

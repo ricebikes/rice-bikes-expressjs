@@ -5,11 +5,12 @@ db = conn.getDB("bikes");
 
 // run the item update queries
 print("Updating items")
-db.items.update({},{$set:{managed:false,disabled:false,condition:"New"}},false,true);
 db.items.update({},{$rename:{price:"standard_price",
                     quantity:"stock",
                     warning_quantity:"desired_stock",
                     shop_cost:"wholesale_cost"}}, false,true);
+// Overwrite desired stock values.
+db.items.update({},{$set:{managed:false,disabled:false,condition:"New",desired_stock:0}},false,true);
 // now, update the transaction collection structure to match the the POS system (move item references)
 cursor = db.transactions.find();
 while (cursor.hasNext()) {
