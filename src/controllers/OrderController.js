@@ -73,7 +73,7 @@ async function resolveItem(item) {
             // throw error
             throw {err: "Transaction was not found"};
         }
-        return {item: itemRef, transaction: transactionRef, quantity: item.quantity};
+        return {item: itemRef, transaction: transactionRef._id, quantity: item.quantity};
     } else {
         return {item: itemRef, quantity: item.quantity};
     }
@@ -319,12 +319,12 @@ router.put('/:id/status', async  (req, res) => {
         }
         if (req.body.status === "Completed" && order.status !== "Completed") {
             // set date_completed
-            order.date_completed = new Date();
             // update item stocks
             const promises = order.items.map(item => updateItemStock(item.item._id, item.quantity));
             await Promise.all(promises);    // await for all promises to resolve
             // Find the order again here. The additional query forces the new item stocks to populate.
             order = await Order.findById(order._id);
+            order.date_completed = new Date();
         } else if (req.body.status !== "Completed" && order.status === "Completed") {
             // decrease item stocks
             const promises = order.items.map(item => updateItemStock(item.item._id, -1 * item.quantity));

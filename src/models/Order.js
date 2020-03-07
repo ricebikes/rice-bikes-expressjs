@@ -9,7 +9,7 @@ var OrderSchema = new mongoose.Schema({
     total_price: {type: Number, default: 0},
     status: String,
     items: [{item: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'},
-        quantity: Number, transaction: {type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', required: false}}]
+        quantity: Number, transaction: {type: String, required: false}}]
 });
 // auto populate item list when querying orders
 // avoid autopopulating transaction
