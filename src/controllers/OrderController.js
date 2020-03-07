@@ -68,7 +68,7 @@ async function resolveItem(item) {
     }
     if (item.transaction) {
         // populate transaction ref
-        let transactionRef = await Transaction.findById(item.transaction._id);
+        let transactionRef = await Transaction.findById(item.transaction);
         if (!transactionRef) {
             // throw error
             throw {err: "Transaction was not found"};
@@ -209,7 +209,7 @@ router.put('/:id/item/:itemId/stock', async (req, res) => {
 });
 
 /**
- * POST /:id/item/:itemId/transaction
+ * PUT /:id/item/:itemId/transaction
  * updates the attached transaction for an item in an order
  * put body:
  * {
