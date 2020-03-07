@@ -6,6 +6,7 @@ var OrderSchema = new mongoose.Schema({
     date_submitted: Date,
     date_completed: Date,
     tracking_number: String,
+    total_price: {type: Number, default: 0},
     status: String,
     items: [{item: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'},
         quantity: Number, transaction: {type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', required: false}}]

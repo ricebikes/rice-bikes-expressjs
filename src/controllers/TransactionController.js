@@ -229,10 +229,10 @@ router.get('/search', function (req, res) {
 
 
 /**
- * GET: /ids
+ * GET: /search/ids
  * Gets all transaction IDs. Useful for searching.
  */
-router.get('/ids', async (req, res) => {
+router.get('/search/ids', async (req, res) => {
    try {
        const distinct = await Transaction.distinct("_id");
        return  res.status(200).send(distinct);

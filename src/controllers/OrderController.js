@@ -58,7 +58,7 @@ router.use(adminMiddleware);
  * Utility function used by POST and PUT to resolve a list of item IDs to items in the database
  * @param item: item, in the following format:
  *  {item: Item, quantity: Number transaction(optional): Transaction }
- * @return promise which can be resolved to mongodb item object
+ * @return promise which can be resolved to orderItem object
  */
 async function resolveItem(item) {
     let itemRef = await Item.findById(item.item._id);
@@ -170,6 +170,8 @@ router.post('/:id/item', async (req, res) => {
                             false);
         if (itemInOrder) return res.status(403).send("Item is already in order");
         const item = await resolveItem(req.body.item);
+        // Add item price to total price of order.
+        order.total_price += item.item.wholesale_cost * item.quantity;
         // add item as first in order
         order.items.unshift(item);
         const savedOrder = await order.save();
@@ -194,6 +196,8 @@ router.put('/:id/item/:itemId/stock', async (req, res) => {
         if (!order) return res.status(404).send("No order found");
         order.items.map(orderItem => {
            if (orderItem.item._id.toString() === req.params.itemId) {
+               // Update total cost of order.
+               order.total_price += (req.body.stock - orderItem.quantity) * orderItem.item.wholesale_cost
                orderItem.quantity = req.body.stock;
            }
         });
@@ -242,7 +246,13 @@ router.delete('/:id/item/:itemId', async (req, res) => {
         const item = await Item.findById(req.params.itemId);
         if (!item) return res.status(404).send("Item not found");
         // remove the requested item from the array
-        order.items = order.items.filter(candidate => !(candidate.item._id.toString() === item._id.toString()));
+        order.items = order.items.filter(candidate => {
+            if (candidate.item._id.toString() === item._id.toString()) {
+                order.total_price -= candidate.item.wholesale_cost * candidate.quantity;
+                return false; // item will be removed
+            }
+            return true;
+        });
         const finalOrder = await order.save();
         return res.status(200).send(finalOrder);
     } catch (err) {
@@ -313,16 +323,18 @@ router.put('/:id/status', async  (req, res) => {
             // update item stocks
             const promises = order.items.map(item => updateItemStock(item.item._id, item.quantity));
             await Promise.all(promises);    // await for all promises to resolve
+            // Find the order again here. The additional query forces the new item stocks to populate.
+            order = await Order.findById(order._id);
         } else if (req.body.status !== "Completed" && order.status === "Completed") {
             // decrease item stocks
             const promises = order.items.map(item => updateItemStock(item.item._id, -1 * item.quantity));
             await Promise.all(promises);    // await for all promises to resolve
+            // Find the order again here. The additional query forces the new item stocks to populate.
+            order = await Order.findById(order._id);
         }
         order.status = req.body.status;
         const savedOrder = await order.save();
-        // Find the order again here. The additional query forces the new item stocks to populate.
-        const final = await Order.findById(savedOrder._id);
-        return res.status(200).send(final);
+        return res.status(200).send(savedOrder);
     } catch (err) {
         res.status(500).send(err);
     }
