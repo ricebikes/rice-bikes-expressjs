@@ -1,3 +1,9 @@
+/*
+OrderController.js: handles management of Orders.
+An order is a collection of OrderItems being ordered from a specific supplier.
+It is expected that once an OrderItem is in an order, it has a specific Item assigned to it,
+and a specific stock of that item.
+ */
 let express = require('express');
 
 /* Wrap our router in our auth protocol */
@@ -8,6 +14,7 @@ let Transaction = require('./../models/Transaction');
 let bodyParser = require('body-parser');
 let adminMiddleware = require('../middleware/AdminMiddleware');
 let Item = require('./../models/Item');
+let OrderItem = require('./../models/OrderItem');
 
 router.use(bodyParser.json());
 router.use(authMiddleware);
@@ -61,6 +68,11 @@ router.use(adminMiddleware);
  * @return promise which can be resolved to orderItem object
  */
 async function resolveItem(item) {
+    const orderItem = await OrderItem.findById(item._id);
+    if (orderItem) {
+        // No need to create a new OrderItem, one exists.
+        return orderItem;
+    }
     let itemRef = await Item.findById(item.item._id);
     if (!itemRef) {
         // throw error
@@ -73,9 +85,16 @@ async function resolveItem(item) {
             // throw error
             throw {err: "Transaction was not found"};
         }
-        return {item: itemRef, transaction: transactionRef._id, quantity: item.quantity};
+        return await OrderItem.create({
+            item: itemRef,
+            quantity: item.quantity,
+            transaction: transactionRef._id
+        });
     } else {
-        return {item: itemRef, quantity: item.quantity};
+        return await OrderItem.create({
+            item: itemRef,
+            quantity: item.quantity
+        });
     }
 }
 
@@ -145,31 +164,19 @@ router.put('/:id/supplier', async  (req, res) => {
 });
 
 /**
- * POST /:id/item: adds item to order
+ * POST /:id/orderItem: assigns orderItem to order
  * post body:
  * {
- *     item: {
- *          item: Item,
- *          quantity: Number
- *          transaction(optional):
- *          Transaction
- *      }
  * }
  */
-router.post('/:id/item', async (req, res) => {
+router.post('/:id/orderItem', async (req, res) => {
     try {
-        if (!req.body.item) return res.status(400).send("No item specified");
-        console.log(req.body.item)
-        if (!req.body.item.item) return res.status(400).send("No item associated with order item");
-        if (req.body.item.quantity == null) return res.status(400).send("No quantity associated with order item");
+        if (!req.body.orderItem) return res.status(400).send("No item specified");
+        if (!req.body.orderItem.item) return res.status(400).send("No item associated with order item");
+        if (req.body.orderItem.quantity == null) return res.status(400).send("No quantity associated with order item");
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
-        // check if the item is already in the order
-        let itemInOrder = order.items.reduce((itemFound, currentItem) =>
-                            itemFound || (currentItem.item._id.toString() === req.body.item.item._id),
-                            false);
-        if (itemInOrder) return res.status(403).send("Item is already in order");
-        const item = await resolveItem(req.body.item);
+        const item = await resolveItem(req.body.orderItem);
         // Add item price to total price of order.
         order.total_price += item.item.wholesale_cost * item.quantity;
         // add item as first in order
@@ -182,8 +189,8 @@ router.post('/:id/item', async (req, res) => {
 });
 
 /**
- * PUT /:id/item/:itemId/stock
- * updates the quantity of an item in an order
+ * PUT /:id/item/:orderItemID/stock
+ * updates the quantity of an item in an order, by the ID of the orderItem
  * put body:
  * {
  *     stock: new stock value
@@ -194,13 +201,12 @@ router.put('/:id/item/:itemId/stock', async (req, res) => {
         if (!req.body.stock) return res.status(400).send("No stock given");
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
-        order.items.map(orderItem => {
-           if (orderItem.item._id.toString() === req.params.itemId) {
-               // Update total cost of order.
-               order.total_price += (req.body.stock - orderItem.quantity) * orderItem.item.wholesale_cost
-               orderItem.quantity = req.body.stock;
-           }
-        });
+        const orderItem = await OrderItem.findById(req.params.itemId);
+        if (!orderItem) return res.status(404).send("No order item found");
+        order.total_price += (req.body.stock - orderItem.quantity) * orderItem.item.wholesale_cost;
+        orderItem.quantity = req.body.stock;
+        const savedOrderItem = await orderItem.save();
+        // Set the new order Item in the order
         const savedOrder = await order.save();
         return res.status(200).send(savedOrder);
     } catch (err) {
@@ -211,6 +217,7 @@ router.put('/:id/item/:itemId/stock', async (req, res) => {
 /**
  * PUT /:id/item/:itemId/transaction
  * updates the attached transaction for an item in an order
+ * itemId should be the ID of the orderItem
  * put body:
  * {
  *     transaction_id: new transaction objectID (small integer)
@@ -223,11 +230,8 @@ router.put('/:id/item/:itemId/transaction', async (req, res) => {
         if (!order) return res.status(404).send("No order found");
         const locatedTransaction = await Transaction.findById(req.body.transaction_id);
         if (!locatedTransaction) return res.status(404).send("No associated transaction found for that ID");
-        order.items.map(orderItem => {
-           if (orderItem.item._id.toString() === req.params.itemId) {
-               orderItem.transaction = locatedTransaction;
-           }
-        });
+        // update the OrderItem by Id
+        const orderItem = await OrderItem.findById()
         const savedOrder = await order.save();
         return res.status(200).send(savedOrder);
     } catch (err) {
