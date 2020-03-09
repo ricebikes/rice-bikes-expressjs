@@ -1,3 +1,4 @@
+#!/bin/mongo
 // Load this file with mongo upgrade.js
 // this will run on an unmodified copy of the current database, and get it ready for the POS systemc
 conn = new Mongo();
