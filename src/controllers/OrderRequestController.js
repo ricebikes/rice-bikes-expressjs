@@ -112,7 +112,8 @@ router.post('/', async (req, res) => {
             item: item,
             request: request,
             transaction: transaction,
-            quantity: quantity
+            quantity: quantity,
+            status: "No Ordered"
         });
         const loggedOrderReq = await addLogToOrderRequest(newOrderReq, req, "Created part request");
         const savedOrderReq = await loggedOrderReq.save();
@@ -232,43 +233,6 @@ router.put('/:id/item', async (req, res) => {
        const finalOrderReq = await loggedOrderReq.save();
        const populatedOrderReq = await OrderRequest.findById(loggedOrderReq._id);
        return res.status(200).send(populatedOrderReq);
-   } catch (err) {
-      return res.status(500).send(err);
-   }
-});
-
-/**
- * PUT /:id/order - adds an OrderRequest to an order
- *
- * PUT Body:
- * {
- *     order_id: ObjectID of the order to add this OrderRequest to
- * }
- */
-router.put('/:id/order', async (req, res) => {
-   try {
-       const orderRequest = await OrderRequest.findById(req.params.id);
-       if (!orderRequest)
-           return res.status(404).send("No matching order request found");
-       // Do not add OrderRequest to Order without an associated item.
-       if (!orderRequest.item)
-           return res.status(403).send("Cannot add order request to order without associated item");
-       if (!req.body.order_id)
-           return res.status(400).send("No order ID to add order request to provided");
-       const locatedOrder = await Order.findById(req.body.order_id);
-       if (!locatedOrder)
-           return res.status(404).send("Specified order could not be found");
-       // First set the orderRequest's order to the located one
-       orderRequest.assignedOrder = locatedOrder;
-       // Now add the orderRequest into the order's OrderRequest array
-       locatedOrder.items.unshift(orderRequest._id);
-       locatedOrder.total_price += orderRequest.quantity * orderRequest.item.wholesale_cost;
-       // Now save both the updated order and updated order request.
-       const loggedOrderRequest = await addLogToOrderRequest(orderRequest, req,
-       `Added request to order with supplier ${locatedOrder.supplier}`);
-       await locatedOrder.save();
-       const savedOrderRequest = await loggedOrderRequest.save();
-       return res.status(200).send(savedOrderRequest);
    } catch (err) {
       return res.status(500).send(err);
    }

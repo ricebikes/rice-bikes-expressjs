@@ -8,6 +8,7 @@ const OrderRequestSchema = new mongoose.Schema({
     item: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'},
     request: String, // describes the item that must be ordered.
     status: String, // order status of OrderRequest.
+    supplier: String, // supplier of OrderRequest.
     quantity: Number,
     transaction: {type: Number, ref: 'Transaction'},
     // Track actions taken on Order Requests.
