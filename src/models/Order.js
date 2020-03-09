@@ -8,7 +8,7 @@ var OrderSchema = new mongoose.Schema({
     tracking_number: String,
     total_price: {type: Number, default: 0},
     status: String,
-    items: [{type: mongoose.Schema.Types.ObjectId, ref: 'OrderItem'}]
+    items: [{type: Number, ref: 'OrderRequest'}]
 });
 // auto populate item list when querying orders
 // avoid autopopulating transaction

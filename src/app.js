@@ -14,6 +14,7 @@ const RepairController = require('./controllers/RepairController');
 const ItemController = require('./controllers/ItemController');
 const CustomerController = require('./controllers/CustomerController');
 const OrderController = require('./controllers/OrderController');
+const OrderRequestController = require('./controllers/OrderRequestController');
 
 /* Create app */
 var app = express();
@@ -50,5 +51,6 @@ app.use('/api/items', ItemController);
 app.use('/api/repairs', RepairController);
 app.use('/api/customers', CustomerController);
 app.use('/api/orders',OrderController);
+app.use('/api/order-requests', OrderRequestController);
 
 module.exports = app;

@@ -1,7 +1,7 @@
 /*
 OrderController.js: handles management of Orders.
-An order is a collection of OrderItems being ordered from a specific supplier.
-It is expected that once an OrderItem is in an order, it has a specific Item assigned to it,
+An order is a collection of OrderRequests being ordered from a specific supplier.
+It is expected that once an OrderRequest is in an order, it has a specific Item assigned to it,
 and a specific stock of that item.
  */
 let express = require('express');
@@ -14,7 +14,7 @@ let Transaction = require('./../models/Transaction');
 let bodyParser = require('body-parser');
 let adminMiddleware = require('../middleware/AdminMiddleware');
 let Item = require('./../models/Item');
-let OrderItem = require('./../models/OrderItem');
+let OrderRequest = require('../models/OrderRequest');
 
 router.use(bodyParser.json());
 router.use(authMiddleware);
@@ -40,7 +40,7 @@ router.get('/daterange',function (req,res) {
  * GET: /. Alias to GET /daterange (gets all orders)
  */
 router.get('/', function (req, res) {
-    res.redirect("./daterange");
+    res.redirect("orders/daterange");
 });
 
 /**
@@ -65,13 +65,13 @@ router.use(adminMiddleware);
  * Utility function used by POST and PUT to resolve a list of item IDs to items in the database
  * @param item: item, in the following format:
  *  {item: Item, quantity: Number transaction(optional): Transaction }
- * @return promise which can be resolved to orderItem object
+ * @return promise which can be resolved to OrderRequest object
  */
 async function resolveItem(item) {
-    const orderItem = await OrderItem.findById(item._id);
-    if (orderItem) {
-        // No need to create a new OrderItem, one exists.
-        return orderItem;
+    const OrderRequest = await OrderRequest.findById(item._id);
+    if (OrderRequest) {
+        // No need to create a new OrderRequest, one exists.
+        return OrderRequest;
     }
     let itemRef = await Item.findById(item.item._id);
     if (!itemRef) {
@@ -85,13 +85,13 @@ async function resolveItem(item) {
             // throw error
             throw {err: "Transaction was not found"};
         }
-        return await OrderItem.create({
+        return await OrderRequest.create({
             item: itemRef,
             quantity: item.quantity,
             transaction: transactionRef._id
         });
     } else {
-        return await OrderItem.create({
+        return await OrderRequest.create({
             item: itemRef,
             quantity: item.quantity
         });
@@ -126,7 +126,7 @@ router.post('/',async (req, res) => {
  * used when an order is marked as completed, to increase stock of items in database
  * @param itemID: ID of Item to update stock of
  * @param quantity: quantity of item that has been shipped
- * @return {Promise<orderItem>}
+ * @return {Promise<OrderRequest>}
  */
 async function updateItemStock(itemID, quantity) {
     // not using try/catch because we want errors to be caught by callers
@@ -164,19 +164,19 @@ router.put('/:id/supplier', async  (req, res) => {
 });
 
 /**
- * POST /:id/orderItem: assigns orderItem to order
+ * POST /:id/OrderRequest: assigns OrderRequest to order
  * post body:
  * {
  * }
  */
-router.post('/:id/orderItem', async (req, res) => {
+router.post('/:id/OrderRequest', async (req, res) => {
     try {
-        if (!req.body.orderItem) return res.status(400).send("No item specified");
-        if (!req.body.orderItem.item) return res.status(400).send("No item associated with order item");
-        if (req.body.orderItem.quantity == null) return res.status(400).send("No quantity associated with order item");
+        if (!req.body.OrderRequest) return res.status(400).send("No item specified");
+        if (!req.body.OrderRequest.item) return res.status(400).send("No item associated with order item");
+        if (req.body.OrderRequest.quantity == null) return res.status(400).send("No quantity associated with order item");
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
-        const item = await resolveItem(req.body.orderItem);
+        const item = await resolveItem(req.body.OrderRequest);
         // Add item price to total price of order.
         order.total_price += item.item.wholesale_cost * item.quantity;
         // add item as first in order
@@ -189,8 +189,8 @@ router.post('/:id/orderItem', async (req, res) => {
 });
 
 /**
- * PUT /:id/item/:orderItemID/stock
- * updates the quantity of an item in an order, by the ID of the orderItem
+ * PUT /:id/item/:OrderRequestID/stock
+ * updates the quantity of an item in an order, by the ID of the OrderRequest
  * put body:
  * {
  *     stock: new stock value
@@ -201,11 +201,11 @@ router.put('/:id/item/:itemId/stock', async (req, res) => {
         if (!req.body.stock) return res.status(400).send("No stock given");
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
-        const orderItem = await OrderItem.findById(req.params.itemId);
-        if (!orderItem) return res.status(404).send("No order item found");
-        order.total_price += (req.body.stock - orderItem.quantity) * orderItem.item.wholesale_cost;
-        orderItem.quantity = req.body.stock;
-        const savedOrderItem = await orderItem.save();
+        const OrderRequest = await OrderRequest.findById(req.params.itemId);
+        if (!OrderRequest) return res.status(404).send("No order item found");
+        order.total_price += (req.body.stock - OrderRequest.quantity) * OrderRequest.item.wholesale_cost;
+        OrderRequest.quantity = req.body.stock;
+        const savedOrderRequest = await OrderRequest.save();
         // Set the new order Item in the order
         const savedOrder = await order.save();
         return res.status(200).send(savedOrder);
@@ -217,7 +217,7 @@ router.put('/:id/item/:itemId/stock', async (req, res) => {
 /**
  * PUT /:id/item/:itemId/transaction
  * updates the attached transaction for an item in an order
- * itemId should be the ID of the orderItem
+ * itemId should be the ID of the OrderRequest
  * put body:
  * {
  *     transaction_id: new transaction objectID (small integer)
@@ -230,8 +230,8 @@ router.put('/:id/item/:itemId/transaction', async (req, res) => {
         if (!order) return res.status(404).send("No order found");
         const locatedTransaction = await Transaction.findById(req.body.transaction_id);
         if (!locatedTransaction) return res.status(404).send("No associated transaction found for that ID");
-        // update the OrderItem by Id
-        const orderItem = await OrderItem.findById()
+        // update the OrderRequest by Id
+        const OrderRequest = await OrderRequest.findById()
         const savedOrder = await order.save();
         return res.status(200).send(savedOrder);
     } catch (err) {
