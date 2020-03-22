@@ -64,7 +64,7 @@ router.use(adminMiddleware);
 
 /**
  * POSTs a new order
- * post body:
+ * POST body:
  * {
  *   supplier: String
  * }
@@ -119,6 +119,13 @@ router.put('/:id/supplier', async  (req, res) => {
         if (!req.body.supplier) return res.status(400).send("No supplier specified");
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
+        // Update the supplier of all Order Requests in this order
+        const promises = order.items.map(async item => {
+            const locatedItem = OrderRequest.findById(item._id);
+            locatedItem.supplier = req.body.supplier;
+            await locatedItem.save();
+        });
+        await Promise.all(promises);
         order.supplier = req.body.supplier;
         const savedOrder = await order.save();
         return res.status(200).send(savedOrder);
@@ -137,7 +144,7 @@ router.put('/:id/supplier', async  (req, res) => {
 router.post('/:id/order-request', async (req, res) => {
     try {
         if (!req.body.order_request_id) return res.status(400).send("No order request specified");
-        const orderRequest = OrderRequest.findById(req.body.order_request_id);
+        const orderRequest = await OrderRequest.findById(req.body.order_request_id);
         if (!orderRequest) return res.status(404).send("Order request specified, but none found!");
         if (!orderRequest.item) return res.status(403)
             .send("Order request must have an associated item to be added to an order");
@@ -146,6 +153,7 @@ router.post('/:id/order-request', async (req, res) => {
         // update OrderRequest to match order
         orderRequest.status = order.status;
         orderRequest.supplier = order.supplier;
+        orderRequest.associatedOrder = order._id;
         const savedReq = await orderRequest.save();
         // Add item price to total price of order.
         order.total_price += savedReq.item.wholesale_cost * savedReq.quantity;
@@ -159,14 +167,14 @@ router.post('/:id/order-request', async (req, res) => {
 });
 
 /**
- * PUT /:id/item/:reqId/stock
+ * PUT /:id/order-request/:reqId/stock
  * updates the quantity of an Order Request in an order, by the ID of the OrderRequest
  * put body:
  * {
  *     stock: new stock value
  * }
  */
-router.put('/:id/item/:reqId/stock', async (req, res) => {
+router.put('/:id/order-request/:reqId/stock', async (req, res) => {
     try {
         if (!req.body.stock) return res.status(400).send("No stock given");
         let order = await Order.findById(req.params.id);
@@ -178,14 +186,16 @@ router.put('/:id/item/:reqId/stock', async (req, res) => {
         const savedOrderRequest = await orderRequest.save();
         // Set the new order Item in the order
         const savedOrder = await order.save();
-        return res.status(200).send(savedOrder);
+        // force the order to update with another query
+        const updatedOrder = await Order.findById(order._id);
+        return res.status(200).send(updatedOrder);
     } catch (err) {
         res.status(500).send(err);
     }
 });
 
 /**
- * PUT /:id/item/:reqId/transaction
+ * PUT /:id/order-request/:reqId/transaction
  * updates the attached transaction for an order request in an order
  * reqId should be the ID of the OrderRequest
  * put body:
@@ -193,7 +203,7 @@ router.put('/:id/item/:reqId/stock', async (req, res) => {
  *     transaction_id: new transaction objectID (small integer)
  * }
  */
-router.put('/:id/item/:reqId/transaction', async (req, res) => {
+router.put('/:id/order-request/:reqId/transaction', async (req, res) => {
     try {
         if (!req.body.transaction_id) return res.status(400).send("No transaction id given");
         let order = await Order.findById(req.params.id);
@@ -206,7 +216,8 @@ router.put('/:id/item/:reqId/transaction', async (req, res) => {
         orderRequest.transaction = locatedTransaction;
         await orderRequest.save();
         const savedOrder = await order.save();
-        return res.status(200).send(savedOrder);
+        const updatedOrder = await Order.findById(order._id);
+        return res.status(200).send(updatedOrder);
     } catch (err) {
         res.status(500).send(err);
     }
@@ -313,14 +324,15 @@ router.put('/:id/status', async  (req, res) => {
         }
         // Update the status of all Order Items in this order
         const promises = order.items.map(async item => {
-            const locatedItem = OrderRequest.findById(item._id);
+            const locatedItem = await OrderRequest.findById(item._id);
             locatedItem.status = req.body.status;
             await locatedItem.save();
         });
         await Promise.all(promises);
         order.status = req.body.status;
         const savedOrder = await order.save();
-        return res.status(200).send(savedOrder);
+        const updatedOrder = await Order.findById(savedOrder._id);
+        return res.status(200).send(updatedOrder);
     } catch (err) {
         res.status(500).send(err);
     }

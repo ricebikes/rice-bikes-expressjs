@@ -11,6 +11,7 @@ const OrderRequestSchema = new mongoose.Schema({
     supplier: String, // supplier of OrderRequest.
     quantity: Number,
     transaction: {type: Number, ref: 'Transaction'},
+    associatedOrder: String,
     // Track actions taken on Order Requests.
     actions: [{
         employee: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
@@ -26,6 +27,7 @@ const autoPopulate = function(next) {
     /*
     Note: transaction is intentionally not automatically populated. Populate Order Request's transactions on a
     case by case basis.
+    Do NOT automatically populate the reference to the order, doing so will cause a circular dependency.
      */
     next();
 };
