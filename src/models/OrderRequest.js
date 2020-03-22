@@ -23,9 +23,6 @@ const OrderRequestSchema = new mongoose.Schema({
 const autoPopulate = function(next) {
     this.populate('item');
     this.populate('actions.employee');
-    // this does not create a circular dependency because populate is not recursive
-    // thanks to mongoDB for enabling my poor design decisions
-    this.populate('assignedOrder');
     /*
     Note: transaction is intentionally not automatically populated. Populate Order Request's transactions on a
     case by case basis.

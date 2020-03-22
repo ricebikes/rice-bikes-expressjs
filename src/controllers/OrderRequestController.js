@@ -113,7 +113,7 @@ router.post('/', async (req, res) => {
             request: request,
             transaction: transaction,
             quantity: quantity,
-            status: "No Ordered"
+            status: "Not Ordered"
         });
         const loggedOrderReq = await addLogToOrderRequest(newOrderReq, req, "Created part request");
         const savedOrderReq = await loggedOrderReq.save();
@@ -166,6 +166,28 @@ router.put("/:id/quantity", async (req, res) => {
        return res.status(200).send(finalOrderReq);
    } catch (err) {
       return res.status(500).send(err);
+   }
+});
+
+/**
+ * PUT: /:id/status - update or set the status of the OrderRequest
+ *
+ * PUT body:
+ * {
+ *     status: New Status String
+ * }
+ */
+router.put('/:id/status', async (req, res) => {
+   try {
+       const orderRequest = await OrderRequest.findById(req.params.id);
+       if (!orderRequest) return res.status(404).send("No order request found!");
+       if (!req.body.status) return res.status(400).send("No status specified with request body");
+       orderRequest.status = req.body.status;
+       const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, `Updated Status`);
+       const finalOrderReq = await loggedOrderReq.save();
+       return res.status(200).send(finalOrderReq);
+   } catch (err) {
+      res.status(500).send(err);
    }
 });
 
