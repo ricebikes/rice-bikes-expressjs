@@ -1,3 +1,9 @@
+/**
+ * Order requests are the basis for each item that will be ordered.
+ * Initially they start as a request for a part, then an item is assigned to them, and they are attached to
+ * an order. Once they are attached to an order, modifications to the order will update the OrderRequest.
+ */
+
 const mongoose = require('mongoose');
 const autoIncrement = require('mongoose-plugin-autoinc');
 const config = require('../config')();
@@ -11,13 +17,12 @@ const OrderRequestSchema = new mongoose.Schema({
     supplier: String, // supplier of OrderRequest.
     quantity: Number,
     transaction: {type: Number, ref: 'Transaction'},
-    associatedOrder: String,
+    orderRef: {type: mongoose.Schema.Types.ObjectId, ref: 'Order'},
     // Track actions taken on Order Requests.
     actions: [{
         employee: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
         description: String,
         time: Date,
-
     }]
 });
 // Auto populate item references when querying order Items
@@ -25,9 +30,10 @@ const autoPopulate = function(next) {
     this.populate('item');
     this.populate('actions.employee');
     /*
-    Note: transaction is intentionally not automatically populated. Populate Order Request's transactions on a
-    case by case basis.
-    Do NOT automatically populate the reference to the order, doing so will cause a circular dependency.
+     * Note: transaction is intentionally not automatically populated. Populate Order Request's transactions on a
+     * case by case basis.
+     *
+     * Do NOT autopopulate the orderRef. Doing so creates a circular dependency.
      */
     next();
 };

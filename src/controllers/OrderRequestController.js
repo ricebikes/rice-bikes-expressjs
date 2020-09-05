@@ -32,7 +32,7 @@ router.use(bodyParser.json());
  */
 async function addLogToOrderRequest(item, req, description) {
     const user_id = req.headers['user-id'];
-    if (!user_id) throw {error:'did not find a user-id header'};
+    if (!user_id) throw { error: 'did not find a user-id header' };
     try {
         const user = await User.findById(user_id);
         const action = {
@@ -56,12 +56,12 @@ router.use(authMiddleware);
  * GET: / - gets all OrderRequests.
  */
 router.get('/', async (req, res) => {
-   try {
-       const allOrderRequests = await OrderRequest.find();
-       return  res.status(200).send(allOrderRequests);
-   } catch (err) {
-      return res.status(500).send(err);
-   }
+    try {
+        const allOrderRequests = await OrderRequest.find();
+        return res.status(200).send(allOrderRequests);
+    } catch (err) {
+        return res.status(500).send(err);
+    }
 });
 
 
@@ -74,9 +74,9 @@ router.get('/latest/:number', async (req, res) => {
     try {
         const allOrderRequests = await OrderRequest.find();
         return res.status(200).send(allOrderRequests
-            .slice(allOrderRequests.length - req.params.number , allOrderRequests.length));
+            .slice(allOrderRequests.length - req.params.number, allOrderRequests.length));
     } catch (err) {
-       res.status(500).send(err);
+        res.status(500).send(err);
     }
 });
 
@@ -131,18 +131,18 @@ router.post('/', async (req, res) => {
  *     request: new request string
  * }
  */
-router.put('/:id/request', async (req,res) => {
-   try {
-       const orderRequest = await OrderRequest.findById(req.params.id);
-       if (!orderRequest) return res.status(404).send("No matching order request found");
-       if (!req.body.request) return res.status(400).send("Empty or malformed request string");
-       orderRequest.request = req.body.request;
-       const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, "Updated request description");
-       const finalOrderReq = await loggedOrderReq.save();
-       return res.status(200).send(finalOrderReq);
-   } catch (err) {
-      res.status(500).send(err);
-   }
+router.put('/:id/request', async (req, res) => {
+    try {
+        const orderRequest = await OrderRequest.findById(req.params.id);
+        if (!orderRequest) return res.status(404).send("No matching order request found");
+        if (!req.body.request) return res.status(400).send("Empty or malformed request string");
+        orderRequest.request = req.body.request;
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, "Updated request description");
+        const finalOrderReq = await loggedOrderReq.save();
+        return res.status(200).send(finalOrderReq);
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 
@@ -155,40 +155,18 @@ router.put('/:id/request', async (req,res) => {
  * }
  */
 router.put("/:id/quantity", async (req, res) => {
-   try {
-       const orderRequest = await OrderRequest.findById(req.params.id);
-       if (!orderRequest) return res.status(404).send("No matching order request found");
-       if (!req.body.quantity) return  res.status(400).send("No new quantity specified");
-       const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
-           `Changed quantity from ${orderRequest.quantity} to ${req.body.quantity}`);
-       loggedOrderReq.quantity = req.body.quantity;
-       const finalOrderReq = await loggedOrderReq.save();
-       return res.status(200).send(finalOrderReq);
-   } catch (err) {
-      return res.status(500).send(err);
-   }
-});
-
-/**
- * PUT: /:id/status - update or set the status of the OrderRequest
- *
- * PUT body:
- * {
- *     status: New Status String
- * }
- */
-router.put('/:id/status', async (req, res) => {
-   try {
-       const orderRequest = await OrderRequest.findById(req.params.id);
-       if (!orderRequest) return res.status(404).send("No order request found!");
-       if (!req.body.status) return res.status(400).send("No status specified with request body");
-       orderRequest.status = req.body.status;
-       const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, `Updated Status`);
-       const finalOrderReq = await loggedOrderReq.save();
-       return res.status(200).send(finalOrderReq);
-   } catch (err) {
-      res.status(500).send(err);
-   }
+    try {
+        const orderRequest = await OrderRequest.findById(req.params.id);
+        if (!orderRequest) return res.status(404).send("No matching order request found");
+        if (!req.body.quantity) return res.status(400).send("No new quantity specified");
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
+            `Changed quantity from ${orderRequest.quantity} to ${req.body.quantity}`);
+        loggedOrderReq.quantity = req.body.quantity;
+        const finalOrderReq = await loggedOrderReq.save();
+        return res.status(200).send(finalOrderReq);
+    } catch (err) {
+        return res.status(500).send(err);
+    }
 });
 
 /**
@@ -200,35 +178,58 @@ router.put('/:id/status', async (req, res) => {
  * }
  */
 router.put('/:id/transaction', async (req, res) => {
-   try {
-       const orderRequest = await OrderRequest.findById(req.params.id);
-       if (!orderRequest) return res.status(404).send("No matching order request found");
-       if (!req.body.transaction_id) return res.status(400).send("No transaction specified for association");
-       const locatedTransaction = await Transaction.findById(req.body.transaction_id);
-       if (!locatedTransaction) return res.status(404).send("Transaction ID specified could not be found");
-       orderRequest.transaction = locatedTransaction;
-       const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
-           `Set transaction to #${locatedTransaction._id}`);
-       const finalOrderReq = await loggedOrderReq.save();
-       return res.status(200).send(finalOrderReq);
-   } catch (err) {
-      return res.status(500).send(err);
-   }
+    try {
+        const orderRequest = await OrderRequest.findById(req.params.id);
+        if (!orderRequest) return res.status(404).send("No matching order request found");
+        if (!req.body.transaction_id) return res.status(400).send("No transaction specified for association");
+        const locatedTransaction = await Transaction.findById(req.body.transaction_id);
+        if (!locatedTransaction) return res.status(404).send("Transaction ID specified could not be found");
+        orderRequest.transaction = locatedTransaction;
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
+            `Set transaction to #${locatedTransaction._id}`);
+        const finalOrderReq = await loggedOrderReq.save();
+        return res.status(200).send(finalOrderReq);
+    } catch (err) {
+        return res.status(500).send(err);
+    }
 });
 
 /**
  * DELETE: /:id - deletes an OrderRequest by its ID
  */
 router.delete('/:id', async (req, res) => {
-   try {
-       const orderRequest = await OrderRequest.findById(req.params.id);
-       if (!orderRequest) return res.status(404).send("No matching order request found");
-       await orderRequest.remove();
-       return res.status(200).send("OK");
-   } catch (err) {
-      return res.status(500).send(err);
-   }
+    try {
+        const orderRequest = await OrderRequest.findById(req.params.id);
+        if (!orderRequest) return res.status(404).send("No matching order request found");
+        await orderRequest.remove();
+        return res.status(200).send("OK");
+    } catch (err) {
+        return res.status(500).send(err);
+    }
 });
+
+/**
+ * PUT /:id/supplier - modifies the supplier associated with an item.
+ *
+ * PUT Body:
+ * {
+ *     supplier: String holding new supplier name
+ * }
+ */
+router.put('/:id/supplier', async(req, res) => {
+    try {
+        const orderRequest = await OrderRequest.findById(req.params.id);
+        if (!orderRequest) return res.status(404).send("No matching order request found");
+        if (!req.body.supplier) return res.status(400).send("No supplier provided to add to order request");
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
+            `Set Supplier to ${req.body.supplier}`);
+        await loggedOrderReq.save();
+        const populatedOrderReq = await OrderRequest.findById(loggedOrderReq._id);
+        return res.status(200).send(populatedOrderReq);
+    } catch (err) {
+        return res.status(500).send(err);
+    }
+})
 
 
 // All endpoints below here require an admin login.
@@ -243,21 +244,44 @@ router.use(adminMiddleware);
  * }
  */
 router.put('/:id/item', async (req, res) => {
-   try {
-       const orderRequest = await OrderRequest.findById(req.params.id);
-       if (!orderRequest) return res.status(404).send("No matching order request found");
-       if (!req.body.item_id) return res.status(400).send("No item ID provided to add to order request");
-       const locatedItem = await Item.findById(req.body.item_id);
-       if (!locatedItem) return res.status(404).send("No item located matching the ID specified");
-       orderRequest.item = locatedItem._id;
-       const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
-           `Assigned item ${locatedItem.name} to request`);
-       const finalOrderReq = await loggedOrderReq.save();
-       const populatedOrderReq = await OrderRequest.findById(loggedOrderReq._id);
-       return res.status(200).send(populatedOrderReq);
-   } catch (err) {
-      return res.status(500).send(err);
-   }
+    try {
+        const orderRequest = await OrderRequest.findById(req.params.id);
+        if (!orderRequest) return res.status(404).send("No matching order request found");
+        if (!req.body.item_id) return res.status(400).send("No item ID provided to add to order request");
+        const locatedItem = await Item.findById(req.body.item_id);
+        if (!locatedItem) return res.status(404).send("No item located matching the ID specified");
+        orderRequest.item = locatedItem._id;
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
+            `Assigned item ${locatedItem.name} to request`);
+        const finalOrderReq = await loggedOrderReq.save();
+        const populatedOrderReq = await OrderRequest.findById(loggedOrderReq._id);
+        return res.status(200).send(populatedOrderReq);
+    } catch (err) {
+        return res.status(500).send(err);
+    }
 });
+
+/**
+ * PUT: /:id/status - update or set the status of the OrderRequest
+ *
+ * PUT body:
+ * {
+ *     status: New Status String
+ * }
+ */
+router.put('/:id/status', async (req, res) => {
+    try {
+        const orderRequest = await OrderRequest.findById(req.params.id);
+        if (!orderRequest) return res.status(404).send("No order request found!");
+        if (!req.body.status) return res.status(400).send("No status specified with request body");
+        orderRequest.status = req.body.status;
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, `Updated Status`);
+        const finalOrderReq = await loggedOrderReq.save();
+        return res.status(200).send(finalOrderReq);
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
 
 module.exports = router;

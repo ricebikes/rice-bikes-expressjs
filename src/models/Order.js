@@ -1,7 +1,11 @@
+/**
+ * Orders track order requests. The order request holds a reference to the order it is a member of, but
+ * generally once OrderRequests are in an Order they will be modified from there.
+ */
 var mongoose = require('mongoose');
 
 var OrderSchema = new mongoose.Schema({
-    supplier: {type: String, required: true},
+    supplier: String,
     date_created: {type: Date, required: true},
     date_submitted: Date,
     date_completed: Date,
