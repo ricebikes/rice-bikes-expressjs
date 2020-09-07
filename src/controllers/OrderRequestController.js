@@ -184,7 +184,7 @@ router.put('/:id/transaction', async (req, res) => {
         if (!req.body.transaction_id) return res.status(400).send("No transaction specified for association");
         const locatedTransaction = await Transaction.findById(req.body.transaction_id);
         if (!locatedTransaction) return res.status(404).send("Transaction ID specified could not be found");
-        orderRequest.transaction = locatedTransaction;
+        orderRequest.transaction = locatedTransaction._id;
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
             `Set transaction to #${locatedTransaction._id}`);
         const finalOrderReq = await loggedOrderReq.save();
@@ -221,6 +221,7 @@ router.put('/:id/supplier', async(req, res) => {
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).send("No matching order request found");
         if (!req.body.supplier) return res.status(400).send("No supplier provided to add to order request");
+        orderRequest.supplier = req.body.supplier;
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
             `Set Supplier to ${req.body.supplier}`);
         await loggedOrderReq.save();
