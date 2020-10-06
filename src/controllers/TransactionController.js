@@ -331,6 +331,8 @@ router.put('/:id/complete', function(req,res) {
 router.put('/:id/mark_paid',function (req,res) {
   Transaction.findById(req.params.id, function (err,transaction) {
     if (err) return res.status(500).send(err);
+    // Check to make sure transaction has been completed
+    if (!transaction.complete) return res.status(400).send("Cannot checkout an incomplete transaction");
     if (req.body.is_paid && !transaction.is_paid) {
       res.mailer.send('email-receipt', {
         to: transaction.customer.email,
@@ -342,7 +344,6 @@ router.put('/:id/mark_paid',function (req,res) {
       });
     }
     transaction.is_paid = req.body.is_paid;
-    transaction.complete = true;
     // log this action
     let description = req.body.is_paid ? 'Marked Transaction paid' : 'Marked Transaction as waiting';
     addLogToTransaction(transaction,req,description,function (err, logged_transaction) {
