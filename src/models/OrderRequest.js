@@ -11,13 +11,15 @@ const config = require('../config')();
 var connection = mongoose.createConnection(config.db_uri);
 
 const OrderRequestSchema = new mongoose.Schema({
-    item: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'},
     request: String, // describes the item that must be ordered.
-    status: String, // order status of OrderRequest.
-    supplier: String, // supplier of OrderRequest.
+    partNumber: String, // The item's part number, if known
     quantity: Number,
-    transaction: {type: Number, ref: 'Transaction'},
-    orderRef: {type: mongoose.Schema.Types.ObjectId, ref: 'Order'},
+    transactions: [{type: Number, ref: 'Transaction'}],
+    itemRef: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'}, // Item that will be ordered
+    orderRef: {type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null},
+    notes: String, // Generic transaction notes
+    // This should not be updated in orderRequestController. Modifications to the order holding this orderRequest should change this status
+    status: {type: String, default: "Not Ordered"}, 
     // Track actions taken on Order Requests.
     actions: [{
         employee: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
@@ -27,7 +29,7 @@ const OrderRequestSchema = new mongoose.Schema({
 });
 // Auto populate item references when querying order Items
 const autoPopulate = function(next) {
-    this.populate('item');
+    this.populate('itemRef');
     this.populate('actions.employee');
     /*
      * Note: transaction is intentionally not automatically populated. Populate Order Request's transactions on a

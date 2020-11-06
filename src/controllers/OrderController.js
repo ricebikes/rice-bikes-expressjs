@@ -20,27 +20,28 @@ router.use(bodyParser.json());
 router.use(authMiddleware);
 
 /**
- * GET: /daterange. Accepts following parameters: start, end.
- * Both should be seconds since UNIX epoch
- */
-router.get('/daterange',function (req,res) {
-    // set start and end, or use default values if they were not given.
-   let start = isNaN(parseInt(req.query.start)) ? 0 : parseInt(req.query.start);
-   let end = isNaN(parseInt(req.query.end)) ? Date.now() : parseInt(req.query.end);
-   Order.find(
-       // require date between two UNIX timestamps
-   {date_created: { $gt: new Date(start), $lt: new Date(end)}},
-       function (err, orders) {
-           if (err) return res.status(500);
-           return res.status(200).send(orders);
-       });
-});
-
-/**
- * GET: /. Alias to GET /daterange (gets all orders)
+ * GET: / Get orders.
+ *  Accepts following parameters: 
+ *  start_date: first order date to show, seconds since unix epoch
+ *  end_date: latest order date to show, seconds since unix epoch
+ *  active: should only active orders be returned
  */
 router.get('/', function (req, res) {
-    res.redirect("orders/daterange");
+    // set start and end, or use default values if they were not given.
+    let start = isNaN(parseInt(req.query.start_date)) ? 0 : parseInt(req.query.start_date);
+    let end = isNaN(parseInt(req.query.end_date)) ? Date.now() : parseInt(req.query.end_date);
+    let active = req.query.active;
+    // Create date objects from timestamps
+    let query = { date_created: { $gt: new Date(start), $lt: new Date(end) } };
+    if (active) {
+        query['status'] = "In Cart";
+    }
+    Order.find(
+        query,
+        function (err, orders) {
+            if (err) return res.status(500);
+            return res.status(200).send(orders);
+        });
 });
 
 /**
@@ -69,14 +70,14 @@ router.use(adminMiddleware);
  *   supplier: String
  * }
  */
-router.post('/',async (req, res) => {
+router.post('/', async (req, res) => {
     if (!req.body.supplier) {
         return res.status(400).send("No supplier provided");
     }
     try {
         const supplier = req.body.supplier;
         // create order using populated item refs
-        let newOrder = await Order.create({supplier: supplier, date_created: new Date(), status: "In Cart"});
+        let newOrder = await Order.create({ supplier: supplier, date_created: new Date(), status: "In Cart" });
         res.status(200).send(newOrder);
     } catch (err) {
         // push error back to frontend user
@@ -97,12 +98,12 @@ async function updateItemStock(itemID, quantity) {
     const itemRef = await Item.findById(itemID);
     if (!itemRef) {
         // throw error so the frontend knows something went wrong
-        throw {err: "Stock update requested for invalid item"};
+        throw { err: "Stock update requested for invalid item" };
     }
     itemRef.stock += quantity;
     const restockedItem = await itemRef.save();
     if (!restockedItem) {
-        throw {err: "Failed to save new stock state of item"};
+        throw { err: "Failed to save new stock state of item" };
     }
     return restockedItem;
 }
@@ -114,7 +115,7 @@ async function updateItemStock(itemID, quantity) {
  *     supplier: new supplier
  * }
  */
-router.put('/:id/supplier', async  (req, res) => {
+router.put('/:id/supplier', async (req, res) => {
     try {
         if (!req.body.supplier) return res.status(400).send("No supplier specified");
         let order = await Order.findById(req.params.id);
@@ -146,17 +147,23 @@ router.post('/:id/order-request', async (req, res) => {
         if (!req.body.order_request_id) return res.status(400).send("No order request specified");
         const orderRequest = await OrderRequest.findById(req.body.order_request_id);
         if (!orderRequest) return res.status(404).send("Order request specified, but none found!");
-        if (!orderRequest.item) return res.status(403)
-            .send("Order request must have an associated item to be added to an order");
+        if (orderRequest.orderRef) {
+            return res.status(403).send("Cannot associate order request, already associated to another order");
+        }
+        if (!orderRequest.itemRef) {
+            return res.status(403).send("Order request must have an associated item to be added to an order");
+        }
+        if (orderRequest.quantity < 1) {
+            return res.status(400).send("Order request has bad quantity: " + orderRequest.quantity);
+        }
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
         // update OrderRequest to match order
+        orderRequest.orderRef = order._id;
         orderRequest.status = order.status;
-        orderRequest.supplier = order.supplier;
-        orderRequest.associatedOrder = order._id;
         const savedReq = await orderRequest.save();
         // Add item price to total price of order.
-        order.total_price += savedReq.item.wholesale_cost * savedReq.quantity;
+        order.total_price += savedReq.itemRef.wholesale_cost * savedReq.quantity;
         // add item as first in order
         order.items.unshift(savedReq);
         const savedOrder = await order.save();
@@ -167,65 +174,9 @@ router.post('/:id/order-request', async (req, res) => {
 });
 
 /**
- * PUT /:id/order-request/:reqId/stock
- * updates the quantity of an Order Request in an order, by the ID of the OrderRequest
- * put body:
- * {
- *     stock: new stock value
- * }
- */
-router.put('/:id/order-request/:reqId/stock', async (req, res) => {
-    try {
-        if (!req.body.stock) return res.status(400).send("No stock given");
-        let order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).send("No order found");
-        const orderRequest = await OrderRequest.findById(req.params.reqId);
-        if (!orderRequest) return res.status(404).send("No order request found");
-        order.total_price += (req.body.stock - orderRequest.quantity) * orderRequest.item.wholesale_cost;
-        orderRequest.quantity = req.body.stock;
-        const savedOrderRequest = await orderRequest.save();
-        // Set the new order Item in the order
-        const savedOrder = await order.save();
-        // force the order to update with another query
-        const updatedOrder = await Order.findById(order._id);
-        return res.status(200).send(updatedOrder);
-    } catch (err) {
-        res.status(500).send(err);
-    }
-});
-
-/**
- * PUT /:id/order-request/:reqId/transaction
- * updates the attached transaction for an order request in an order
- * reqId should be the ID of the OrderRequest
- * put body:
- * {
- *     transaction_id: new transaction objectID (small integer)
- * }
- */
-router.put('/:id/order-request/:reqId/transaction', async (req, res) => {
-    try {
-        if (!req.body.transaction_id) return res.status(400).send("No transaction id given");
-        let order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).send("No order found");
-        const locatedTransaction = await Transaction.findById(req.body.transaction_id);
-        if (!locatedTransaction) return res.status(404).send("No associated transaction found for that ID");
-        // update the OrderRequest by Id
-        const orderRequest = await OrderRequest.findById(req.params.reqId);
-        if (!orderRequest) return res.status(404).send("No order request found for given ID");
-        orderRequest.transaction = locatedTransaction;
-        await orderRequest.save();
-        const savedOrder = await order.save();
-        const updatedOrder = await Order.findById(order._id);
-        return res.status(200).send(updatedOrder);
-    } catch (err) {
-        res.status(500).send(err);
-    }
-});
-
-/**
  * DELETE /:id/order-request/:reqId
  * deletes an order request from the order by the given reqId (for the order request)
+ * Does not delete order request, simply disassociates it with the order.
  */
 router.delete('/:id/order-request/:reqId', async (req, res) => {
     try {
@@ -236,12 +187,14 @@ router.delete('/:id/order-request/:reqId', async (req, res) => {
         // remove the requested request from the array
         order.items = order.items.filter(candidate => {
             if (candidate._id.toString() === orderRequest._id.toString()) {
-                order.total_price -= candidate.item.wholesale_cost * candidate.quantity;
+                // Adjust price of order.
+                order.total_price -= candidate.itemRef.wholesale_cost * candidate.quantity;
                 return false; // item will be removed
             }
             return true;
         });
         orderRequest.status = "Not Ordered";
+        orderRequest.orderRef = null;
         await orderRequest.save();
         const finalOrder = await order.save();
         return res.status(200).send(finalOrder);
@@ -257,7 +210,7 @@ router.delete('/:id/order-request/:reqId', async (req, res) => {
  *    tracking_number: new order tracking number
  * }
  */
-router.put('/:id/tracking_number', async  (req, res) => {
+router.put('/:id/tracking_number', async (req, res) => {
     try {
         if (!req.body.tracking_number) return res.status(400).send("No tracking number specified");
         let order = await Order.findById(req.params.id);
@@ -274,14 +227,21 @@ router.put('/:id/tracking_number', async  (req, res) => {
  * DELETE /:id : deletes an order by it's ID
  */
 router.delete('/:id', async (req, res) => {
-   try {
-       let order = await Order.findById(req.params.id);
-       if (!order) return res.status(404).send("No order found");
-       await order.remove();
-       return res.status(200).send("OK")
-   } catch (err) {
-       res.status(500).send(err);
-   }
+    try {
+        let order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).send("No order found");
+        // Remove the order id from all order requests in order.
+        for (let orderReqId of order.items) {
+            let orderReq = await OrderRequest.findById(orderReqId);
+            orderReq.orderRef = null;
+            orderReq.status = "Not Ordered";
+            await orderReq.save();
+        }
+        await order.remove();
+        return res.status(200).send("OK")
+    } catch (err) {
+        res.status(500).send(err);
+    }
 });
 
 /**
@@ -293,7 +253,7 @@ router.delete('/:id', async (req, res) => {
  *     status: new status string of the order
  * }
  */
-router.put('/:id/status', async  (req, res) => {
+router.put('/:id/status', async (req, res) => {
     try {
         if (!req.body.status) return res.status(400).send("No status specified");
         let order = await Order.findById(req.params.id);
