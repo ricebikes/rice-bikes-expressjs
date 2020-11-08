@@ -438,7 +438,7 @@ router.put("/:id", async (req, res) => {
     // This function is being phased out in favor of individual endpoints for each element of transaction
     transaction.waiting_email = req.body.waiting_email;
     transaction.waiting_part = req.body.waiting_part;
-    transaction.urgent = req.body.waiting_part;
+    transaction.urgent = req.body.urgent;
     transaction.refurb = req.body.refurb;
     transaction.transaction_type = req.body.transaction_type;
     const savedTransaction = await transaction.save();

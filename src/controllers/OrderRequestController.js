@@ -73,8 +73,25 @@ router.get('/', async (req, res) => {
 router.get('/latest/:number', async (req, res) => {
     try {
         const allOrderRequests = await OrderRequest.find();
-        return res.status(200).send(allOrderRequests
-            .slice(allOrderRequests.length - req.params.number, allOrderRequests.length));
+        // Slice the returned array to get only latest requests. Reverse array so newest request is first
+        if (allOrderRequests.length < req.params.number) {
+            return res.status(200).send(allOrderRequests.reverse());
+        } else {
+            return res.status(200).send(allOrderRequests
+                .slice(allOrderRequests.length - req.params.number, allOrderRequests.length).reverse());
+        }
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+/**
+ * GET: /distinct-ids: gets all distinct order request IDs
+ */
+router.get('/distinct-ids', async (req, res) => {
+    try {
+        const allIDs = await OrderRequest.distinct('_id');
+        return res.status(200).send(allIDs);
     } catch (err) {
         res.status(500).send(err);
     }
@@ -111,7 +128,7 @@ router.post('/', async (req, res) => {
             }
         }
         const partNumber = req.body.partNumber;
-        const quantity = req.body.quantity; 
+        const quantity = req.body.quantity;
         const request = req.body.request;
         const newOrderReq = await OrderRequest.create({
             item: item,
@@ -264,9 +281,9 @@ router.delete('/:id', async (req, res) => {
             // Get reference to order this request is in, and update cost.
             let order = await Order.findById(orderRequest.orderRef);
             let item = await Item.findById(orderRequest.itemRef);
-            order.total_price -= item.wholesale_cost;
+            order.total_price -= item.wholesale_cost * orderRequest.quantity;
             // Remove orderRequest from order.
-            order.items.splice(order.items.indexOf(orderRequest._id));
+            order.items = order.items.splice(order.items.indexOf(orderRequest._id), 1);
             await order.save();
         }
         await orderRequest.remove();
