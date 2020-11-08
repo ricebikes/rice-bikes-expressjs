@@ -107,7 +107,7 @@ router.post('/', async (req, res) => {
             for (let transaction of req.body.transactions) {
                 let located_transaction = await Transaction.findById(transaction);
                 if (!located_transaction) return res.status(404).send("Transaction ID " + transaction + " given, but no transaction found");
-                transactions.push(located_transaction);
+                transactions.push(located_transaction._id);
             }
         }
         const partNumber = req.body.partNumber;
@@ -208,6 +208,12 @@ router.put("/:id/quantity", async (req, res) => {
         const orderrequest = await OrderRequest.findById(req.params.id);
         if (!orderrequest) return res.status(404).send("No matching order request found");
         if (!req.body.quantity) return res.status(400).send("No new quantity specified");
+        if (orderrequest.orderRef) {
+            // Update price of the order
+            let order = await Order.findById(orderrequest.orderRef);
+            order.total_price += orderrequest.itemRef.wholesale_cost * (req.body.quantity - orderrequest.quantity);
+            await order.save();
+        }
         const loggedorderreq = await addLogToOrderRequest(orderrequest, req,
             `Changed quantity from ${orderrequest.quantity} to ${req.body.quantity}`);
         loggedorderreq.quantity = req.body.quantity;
@@ -235,7 +241,7 @@ router.put('/:id/transactions', async (req, res) => {
         for (let transaction_id of req.body.transactions) {
             const locatedTransaction = await Transaction.findById(transaction_id);
             if (!locatedTransaction) return res.status(404).send(`Transaction ID ${transaction_id} specified could not be found`);
-            transactions.push(locatedTransaction);
+            transactions.push(locatedTransaction._id);
         }
         orderRequest.transactions = transactions;
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
@@ -289,6 +295,12 @@ router.put('/:id/item', async (req, res) => {
         if (!req.body.item_id) return res.status(400).send("No item ID provided to add to order request");
         const locatedItem = await Item.findById(req.body.item_id);
         if (!locatedItem) return res.status(404).send("No item located matching the ID specified");
+        if (orderRequest.orderRef) {
+            // We need to update the order's cost to match this new item.
+            const order = await Order.findById(orderRequest.orderRef);
+            order.total_price += (locatedItem.wholesale_cost - orderRequest.itemRef.wholesale_cost) * orderRequest.quantity;
+            await order.save();
+        }
         orderRequest.itemRef = locatedItem._id;
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
             `Assigned item ${locatedItem.name} to request`);

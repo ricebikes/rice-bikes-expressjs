@@ -161,6 +161,7 @@ router.post('/:id/order-request', async (req, res) => {
         // update OrderRequest to match order
         orderRequest.orderRef = order._id;
         orderRequest.status = order.status;
+        orderRequest.supplier = order.supplier;
         const savedReq = await orderRequest.save();
         // Add item price to total price of order.
         order.total_price += savedReq.itemRef.wholesale_cost * savedReq.quantity;
@@ -194,6 +195,7 @@ router.delete('/:id/order-request/:reqId', async (req, res) => {
             return true;
         });
         orderRequest.status = "Not Ordered";
+        orderRequest.supplier = null;
         orderRequest.orderRef = null;
         await orderRequest.save();
         const finalOrder = await order.save();

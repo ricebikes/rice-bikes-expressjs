@@ -20,6 +20,8 @@ const OrderRequestSchema = new mongoose.Schema({
     notes: String, // Generic transaction notes
     // This should not be updated in orderRequestController. Modifications to the order holding this orderRequest should change this status
     status: {type: String, default: "Not Ordered"}, 
+    // This should not be updated in orderRequestController. Modifications to the order holding this orderRequest should change this status
+    supplier: String,
     // Track actions taken on Order Requests.
     actions: [{
         employee: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
