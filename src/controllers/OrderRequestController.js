@@ -54,10 +54,24 @@ router.use(authMiddleware);
 
 /**
  * GET: / - gets all OrderRequests.
+ * Possible parameters:
+ * status- status string for order requests
+ * active- if true, only return order requests that are in cart, or not ordered
+ * supplier- string of supplier name
  */
 router.get('/', async (req, res) => {
+    let query = {};
+    if (req.query.status) {
+        query.status = req.query.status;
+    }
+    if (req.query.supplier) {
+        query.supplier = req.query.supplier;
+    }
+    if (req.query.active) {
+        query.status = {$in: ["Not Ordered", "In Cart"]};
+    }
     try {
-        const allOrderRequests = await OrderRequest.find();
+        const allOrderRequests = await OrderRequest.find(query);
         return res.status(200).send(allOrderRequests);
     } catch (err) {
         return res.status(500).send(err);
