@@ -20,6 +20,7 @@ var TransactionSchema = new mongoose.Schema({
   paymentType: {type: [String], default: []},
   waiting_email: {type: Boolean, default: false},
   urgent : {type : Boolean, default: false},
+  orderRequests : [{type: mongoose.Schema.Types.ObjectId, ref: 'OrderRequest'}],
   customer: {type: mongoose.Schema.Types.ObjectId, ref: 'Customer'},
   bikes: [{type: mongoose.Schema.Types.ObjectId, ref: 'Bike'}],
   repairs: [{repair: {type: mongoose.Schema.Types.ObjectId, ref: 'Repair'}, completed: Boolean}],
@@ -37,6 +38,7 @@ var autoPopulate = function (next) {
   this.populate('bikes');
   this.populate('repairs.repair');
   this.populate('items.item');
+  this.populate('orderRequests');
   this.populate('actions.employee'); // user ref of action
   next();
 };
