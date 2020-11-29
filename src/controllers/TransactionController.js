@@ -305,6 +305,9 @@ router.put("/:id/complete", async (req, res) => {
     if (req.body.complete) {
       transaction.date_completed = Date.now();
     }
+    if (transaction.orderRequest.length > 0) {
+      return res.status(403).send("Cannot complete transaction with waiting order requests");
+    }
     // Update item inventory
     for (let item of transaction.items) {
       const found_item = await Item.findById(item.item._id);
@@ -372,7 +375,9 @@ router.post("/:id/order-request", async (req, res) => {
     if (transaction.orderRequests.find(x => x._id == req.body.requestid) != undefined) {
       return res.status(400).send("Cannot add same order request to transaction twice");
     }
-    transaction.orderRequests.push(orderRequest);
+    orderRequest.transactions.push(transaction._id);
+    const savedRequest = await orderRequest.save();
+    transaction.orderRequests.push(savedRequest);
     loggedTransaction = await addLogToTransaction(transaction, req, `Marked as waiting on request #${orderRequest._id}`);
     await loggedTransaction.save();
     return res.status(200).send(loggedTransaction);
@@ -516,6 +521,12 @@ router.delete("/:id", async (req, res) => {
   try {
     const transaction = Transaction.findById(req.params.id);
     if (!transaction) return res.status(404).send("No transaction found.");
+    // Update order requests that reference this transaction.
+    for (let request of transaction.orderRequests) {
+      const requestRef = await OrderRequest.findById(request._id);
+      requestRef.transactions = requestRef.transactions.filter(x => x != transaction._id);
+      await requestRef.save();
+    }
     await transaction.remove();
     res.status(200).send("OK");
   } catch (err) {
