@@ -375,6 +375,8 @@ router.post("/:id/order-request", async (req, res) => {
     if (transaction.orderRequests.find(x => x._id == req.body.requestid) != undefined) {
       return res.status(400).send("Cannot add same order request to transaction twice");
     }
+    // Raise the number of requested items by 1
+    orderRequest.quantity += 1;
     orderRequest.transactions.push(transaction._id);
     const savedRequest = await orderRequest.save();
     transaction.orderRequests.push(savedRequest);
@@ -405,6 +407,10 @@ router.delete('/:id/order-request/:req_id', async (req, res) => {
       // order request was not found.
       return res.status(404).send("Order request not found attached to transaction");
     }
+    let locatedOrderRequest = await OrderRequest.findById(req.params.req_id);
+    // Remove transaction from order request
+    locatedOrderRequest.transactions.splice(locatedOrderRequest.indexOf(transaction._id), 1);
+    await locatedOrderRequest.save()
     transaction.orderRequests.splice(index, 1);
     let loggedTransaction = await addLogToTransaction(transaction, req, `removed part request ${req.params.req_id}`);
     let savedTransaction = await loggedTransaction.save();

@@ -152,6 +152,12 @@ router.post('/', async (req, res) => {
             quantity: quantity,
         });
         const loggedOrderReq = await addLogToOrderRequest(newOrderReq, req, "Created part request");
+        // Add the order request to transactions
+        for (let transaction of loggedOrderReq.transactions) {
+            let transactionRef = await Transaction.findById(transaction);
+            transactionRef.orderRequests.push(loggedOrderReq._id);
+            await transactionRef.save();
+        }
         const savedOrderReq = await loggedOrderReq.save();
         return res.status(200).send(savedOrderReq);
     } catch (err) {
@@ -268,13 +274,27 @@ router.put('/:id/transactions', async (req, res) => {
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).send("No matching order request found");
         if (!req.body.transactions) return res.status(400).send("No transactions specified for association");
-        let transactions = []
-        for (let transaction_id of req.body.transactions) {
+        // Find transactions to remove
+        const removeTransactions = orderRequest.transactions.filter(x => req.body.transactions.indexOf(x) == -1);
+        const addTransactions = req.body.transactions.filter(x => orderRequest.transactions.indexOf(x) == -1);
+        // Remove transactions from order request
+        for (let transaction_id of removeTransactions) {
+            const transactionRef = await Transaction.findById(transaction_id);
+            transactionRef.orderRequests.splice(transactionRef.orderRequests.indexOf(orderRequest._id), 1);
+            await transactionRef.save();
+            let index = orderRequest.transactions.indexOf(transaction_id);
+            orderRequest.transactions.splice(index, 1);
+        }
+        orderRequest = await orderRequest.save()
+        // Add transactions to order request
+        for (let transaction_id of addTransactions) {
             const locatedTransaction = await Transaction.findById(transaction_id);
             if (!locatedTransaction) return res.status(404).send(`Transaction ID ${transaction_id} specified could not be found`);
+            locatedTransaction.orderRequests.push(orderRequest._id);
+            await locatedTransaction.save();
             transactions.push(locatedTransaction._id);
         }
-        orderRequest.transactions = transactions;
+        orderRequest.transactions = orderRequest.transactions.concat(transactions);
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
             "Updated transactions");
         const finalOrderReq = await loggedOrderReq.save();
@@ -299,6 +319,13 @@ router.delete('/:id', async (req, res) => {
             // Remove orderRequest from order.
             order.items = order.items.splice(order.items.indexOf(orderRequest._id), 1);
             await order.save();
+        }
+        // Remove orderRequest from transactions
+        for (let transaction of orderRequest.transactions) {
+            let transactionRef = await Transaction.findById(transaction);
+            let index = transactionRef.orderRequests.indexOf(orderRequest._id);
+            transactionRef.orderRequests.splice(index, 1);
+            await transactionRef.save();
         }
         await orderRequest.remove();
         return res.status(200).send("OK");
