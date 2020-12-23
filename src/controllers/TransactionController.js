@@ -305,7 +305,7 @@ router.put("/:id/complete", async (req, res) => {
     if (req.body.complete) {
       transaction.date_completed = Date.now();
     }
-    if (transaction.orderRequest.length > 0) {
+    if (transaction.orderRequests.length > 0) {
       return res.status(403).send("Cannot complete transaction with waiting order requests");
     }
     // Update item inventory
@@ -598,6 +598,7 @@ router.delete("/:id/bikes/:bike_id", async (req, res) => {
  Adds an existing item to the transaction - "POST /transactions/items"
  Requires user's ID in header
  @param _id: id of item to add
+ @param custom_price: Custom price to set for the item. Only able to be set for used items
  */
 router.post("/:id/items", async (req, res) => {
   try {
@@ -606,13 +607,28 @@ router.post("/:id/items", async (req, res) => {
     const item = await Item.findById(req.body._id);
     if (!item) return res.status(404).send("No item found");
     let newItem;
-    if (transaction.employee && item.wholesale_cost > 0) {
+    // Check to see if a custom price was given
+    if (item.condition == 'Used' && req.body.custom_price != null) {
+      let price = req.body.custom_price;
+      if (typeof price != 'number') {
+        // Parse price
+        price = parseFloat(price);
+      }
+      newItem = {
+        item: item,
+        price: price
+      };
+    }
+    // Check if "customer" is employee
+    else if (transaction.employee && item.wholesale_cost > 0) {
       // Apply employee pricing for this item.
       newItem = {
         item: item,
         price: item.wholesale_cost * config.employee_price_multiplier,
       };
-    } else {
+    } 
+    // Otherwise, apply default pricing
+    else {
       newItem = { item: item, price: item.standard_price };
     }
     transaction.total_cost += newItem.price;
