@@ -371,10 +371,6 @@ router.post("/:id/order-request", async (req, res) => {
     if (!orderRequest) {
       return res.status(404).send("Could not find specified order request");
     }
-    // Make sure order request is not already in transaction.
-    if (transaction.orderRequests.find(x => x._id == req.body.requestid) != undefined) {
-      return res.status(400).send("Cannot add same order request to transaction twice");
-    }
     // Raise the number of requested items by 1
     orderRequest.quantity += 1;
     orderRequest.transactions.push(transaction._id);
@@ -408,12 +404,25 @@ router.delete('/:id/order-request/:req_id', async (req, res) => {
       return res.status(404).send("Order request not found attached to transaction");
     }
     let locatedOrderRequest = await OrderRequest.findById(req.params.req_id);
+    locatedOrderRequest.quantity -= 1;
     // Remove transaction from order request
-    locatedOrderRequest.transactions.splice(locatedOrderRequest.indexOf(transaction._id), 1);
+    locatedOrderRequest.transactions.splice(locatedOrderRequest.transactions.indexOf(transaction._id), 1);
     await locatedOrderRequest.save()
     transaction.orderRequests.splice(index, 1);
     let loggedTransaction = await addLogToTransaction(transaction, req, `removed part request ${req.params.req_id}`);
     let savedTransaction = await loggedTransaction.save();
+    // If located order request quantity is now zero, delete the request.
+    if (locatedOrderRequest.quantity <= 0) {
+      // Delete the order request entirely.
+      if (locatedOrderRequest.orderRef) {
+        // Get reference to order this request is in, and update cost.
+        let order = await Order.findById(locatedOrderRequest.orderRef);
+        // Remove orderRequest from order.
+        order.items = order.items.splice(order.items.indexOf(locatedOrderRequest._id), 1);
+        await order.save();
+      }
+      await locatedOrderRequest.remove();
+    }
     res.status(200).send(savedTransaction);
   } catch (err) {
     return res.status(500).send(err);
@@ -509,7 +518,6 @@ router.put("/:id", async (req, res) => {
     // Only update the fields that this function is meant to handle
     // This function is being phased out in favor of individual endpoints for each element of transaction
     transaction.waiting_email = req.body.waiting_email;
-    transaction.waiting_part = req.body.waiting_part;
     transaction.urgent = req.body.urgent;
     transaction.refurb = req.body.refurb;
     transaction.transaction_type = req.body.transaction_type;
@@ -525,7 +533,7 @@ Deletes a single transaction - "DELETE /transactions/:id"
  */
 router.delete("/:id", async (req, res) => {
   try {
-    const transaction = Transaction.findById(req.params.id);
+    const transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404).send("No transaction found.");
     // Update order requests that reference this transaction.
     for (let request of transaction.orderRequests) {
@@ -602,7 +610,7 @@ router.post("/:id/items", async (req, res) => {
       // Apply employee pricing for this item.
       newItem = {
         item: item,
-        price: item.wholesale_cost * config.employee_price_multipler,
+        price: item.wholesale_cost * config.employee_price_multiplier,
       };
     } else {
       newItem = { item: item, price: item.standard_price };

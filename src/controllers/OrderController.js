@@ -15,6 +15,7 @@ let bodyParser = require('body-parser');
 let adminMiddleware = require('../middleware/AdminMiddleware');
 let Item = require('./../models/Item');
 let OrderRequest = require('../models/OrderRequest');
+const config = require('../config')();
 
 router.use(bodyParser.json());
 router.use(authMiddleware);
@@ -106,6 +107,77 @@ async function updateItemStock(itemID, quantity) {
         throw { err: "Failed to save new stock state of item" };
     }
     return restockedItem;
+}
+
+
+/**
+ * Moves order request from a request into an actual item on provided transactions. Deletes the reference to
+ * the order request, and adds the item. Effectively "fulfills" the order request.
+ * @param {ObjectID} requestID: ID of order request to fulfill on transactions
+ * @param {number[]} transactions: transactions to add item to. One of the item associated to the request will be added to each transaction in the array
+ *                                  (so if a transaction appears twice, two items will be added)
+ */
+async function fulfillOrderRequests(requestID, transactions) {
+    // not using try/catch because we want errors to be caught by callers
+    const requestRef = await OrderRequest.findById(requestID);
+    if (!requestRef) {
+        throw { err: "Could not locate order request to fulfill" };
+    }
+    const itemRef = await Item.findById(requestRef.itemRef._id);
+    if (!itemRef) {
+        // throw error so the frontend knows something went wrong
+        throw { err: "Could not locate item to add to transaction" };
+    }
+    for (let transaction_id of transactions) {
+        const transactionRef = await Transaction.findById(transaction_id);
+        if (!transactionRef) {
+            throw { err: "Could not find transaction to add item to" };
+        }
+        let price = (transactionRef.employee && (itemRef.wholesale_cost > 0)) ? itemRef.wholesale_cost * config.employee_price_multiplier : itemRef.standard_price;
+        transactionRef.items.push({ item: itemRef, price: price });
+        /**
+         * Note that we do not update the order request here. Once an order request is completed, the relationship between the
+         * transaction's orderRequests field and the order request's transactions field can break, and will.
+         */
+        transactionRef.orderRequests.splice(transactionRef.orderRequests.findIndex(x => x._id == requestRef._id), 1)
+        transactionRef.total_cost += price;
+        await transactionRef.save()
+    }
+}
+
+/**
+ * Moves actual item on provided transactions back to an order request. Deletes the reference to
+ * the item. Effectively "unfulfills" the order request.
+ * @param {ObjectID} requestID: ID of order request to unfulfill on transactions
+ * @param {number[]} transactions: transactions to add item to. One of the item associated to the request will be added to each transaction in the array
+ *                                  (so if a transaction appears twice, two items will be added)
+ */
+async function unfulfillOrderRequests(requestID, transactions) {
+    // not using try/catch because we want errors to be caught by callers
+    const requestRef = await OrderRequest.findById(requestID);
+    if (!requestRef) {
+        throw { err: "Could not locate order request to add to transaction" }
+    }
+    const itemRef = await Item.findById(requestRef.itemRef._id);
+    if (!itemRef) {
+        // throw error so the frontend knows something went wrong
+        throw { err: "Could not locate item to remove from transaction" };
+    }
+    for (let transaction_id of transactions) {
+        const transactionRef = await Transaction.findById(transaction_id);
+        if (!transactionRef) {
+            throw { err: "Could not find transaction to add item to" };
+        }
+        transactionRef.items.splice(transactionRef.items.findIndex(x => x.item._id.toString() == itemRef._id.toString()), 1);
+        /**
+         * Note that we do not update the order request here. Once an order request is completed, the relationship between the
+         * transaction's orderRequests field and the order request's transactions field can break, and will.
+         */
+        transactionRef.orderRequests.push(requestRef);
+        let price = (transactionRef.employee && (itemRef.wholesale_cost > 0)) ? itemRef.wholesale_cost * config.employee_price_multiplier : itemRef.standard_price;
+        transactionRef.total_cost -= price;
+        await transactionRef.save()
+    }
 }
 
 /**
@@ -272,15 +344,19 @@ router.put('/:id/status', async (req, res) => {
         if (req.body.status === "Completed" && order.status !== "Completed") {
             // set date_completed
             // update item stocks
-            const promises = order.items.map(item => updateItemStock(item.item._id, item.quantity));
+            let promises = order.items.map(item => updateItemStock(item.itemRef._id, item.quantity));
             await Promise.all(promises);    // await for all promises to resolve
+            promises = order.items.map(item => fulfillOrderRequests(item._id, item.transactions));
+            await Promise.all(promises);    // wait for all transactions to get items added
             // Find the order again here. The additional query forces the new item stocks to populate.
             order = await Order.findById(order._id);
             order.date_completed = new Date();
         } else if (req.body.status !== "Completed" && order.status === "Completed") {
             // decrease item stocks
-            const promises = order.items.map(item => updateItemStock(item.item._id, -1 * item.quantity));
+            let promises = order.items.map(item => updateItemStock(item.itemRef._id, -1 * item.quantity));
             await Promise.all(promises);    // await for all promises to resolve
+            promises = order.items.map(item => unfulfillOrderRequests(item._id, item.transactions));
+            await Promise.all(promises);    // wait for all transactions to get items removed
             // Find the order again here. The additional query forces the new item stocks to populate.
             order = await Order.findById(order._id);
         }

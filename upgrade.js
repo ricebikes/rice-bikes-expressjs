@@ -28,7 +28,9 @@ while (cursor.hasNext()) {
         newItems.push({item: item, price: resolvedItem.standard_price});
     }
     // overwrite the current items for the transaction
-    db.transactions.update({_id:transaction._id},{$set:{items: newItems}})
+    db.transactions.update({_id:transaction._id},{$set:{items: newItems, orderRequests:[]}})
+    // Remove the "waiting on part" field
+    db.transactions.update({_id:transaction._id},{$unset:{waiting_part:""}})
 }
 // create a "tax" item
 db.items.insert({name:"Sales Tax", standard_price:0, disabled:false, managed:true});

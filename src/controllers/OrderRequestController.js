@@ -68,7 +68,7 @@ router.get('/', async (req, res) => {
         query.supplier = req.query.supplier;
     }
     if (req.query.active) {
-        query.status = {$in: ["Not Ordered", "In Cart"]};
+        query.status = { $in: ["Not Ordered", "In Cart"] };
     }
     try {
         const allOrderRequests = await OrderRequest.find(query);
@@ -245,6 +245,9 @@ router.put("/:id/quantity", async (req, res) => {
         const orderrequest = await OrderRequest.findById(req.params.id);
         if (!orderrequest) return res.status(404).send("No matching order request found");
         if (!req.body.quantity) return res.status(400).send("No new quantity specified");
+        if (orderrequest.transactions && req.body.quantity < orderrequest.transactions.length) {
+            return res.status(400).send("Cannot set quantity below number of attached transactions");
+        }
         if (orderrequest.orderRef) {
             // Update price of the order
             let order = await Order.findById(orderrequest.orderRef);
@@ -320,12 +323,22 @@ router.delete('/:id', async (req, res) => {
             order.items = order.items.splice(order.items.indexOf(orderRequest._id), 1);
             await order.save();
         }
-        // Remove orderRequest from transactions
-        for (let transaction of orderRequest.transactions) {
-            let transactionRef = await Transaction.findById(transaction);
-            let index = transactionRef.orderRequests.indexOf(orderRequest._id);
-            transactionRef.orderRequests.splice(index, 1);
-            await transactionRef.save();
+        /**
+         * Special case here: up until this point in the lifecycle of an order request, we try to keep the
+         * transactions' references to an order request in sync with the order request's reference to
+         * the transactions. Once the order is completed however, we want to keep the transaction numbers for
+         * future reference, but we do not want transactions to be "waiting on part", so we let the relationship
+         * lapse. The transaction will no longer have a reference to the order request, but the order request
+         * will have a reference to the transaction.
+         */
+        if (orderRequest.status != 'Completed') {
+            // Remove orderRequest from transactions
+            for (let transaction of orderRequest.transactions) {
+                let transactionRef = await Transaction.findById(transaction);
+                let index = transactionRef.orderRequests.indexOf(orderRequest._id);
+                transactionRef.orderRequests.splice(index, 1);
+                await transactionRef.save();
+            }
         }
         await orderRequest.remove();
         return res.status(200).send("OK");
