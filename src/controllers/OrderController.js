@@ -319,9 +319,36 @@ router.delete('/:id', async (req, res) => {
 });
 
 /**
+ * PUT /:id/freight-charge: updates an order's freight/shipping cost
+ * put body:
+ * {
+ *      charge: freight charge
+ * }
+ */
+router.put('/:id/freight-charge', async (req, res) => {
+    try {
+        if (req.body.charge == null) {
+            return res.status(400).send("A freight charge must be specified");
+        }
+        const order = await Order.findById(req.params.id);
+        if (!order) {
+            return res.status(404).send("No order with given ID found");
+        }
+        if (!order.freight_charge) order.freight_charge = 0;
+        const difference = req.body.charge - order.freight_charge;
+        order.freight_charge = req.body.charge;
+        order.total_price += difference;
+        const savedOrder = await order.save();
+        return res.status(200).send(savedOrder);
+    } catch (err) {
+        res.status(500).send(err);
+    }
+})
+
+/**
  * PUT /:id/status: updates an order's status
- * If the order is completed, date_completed will be set
- * If the order is Ordered, date_submitted will be set
+ * If the order is completed, date_completed will be set (as well as date_submitted if it was null)
+ * If the order is ordered, date_submitted will be set
  * put body:
  * {
  *     status: new status string of the order
@@ -342,7 +369,6 @@ router.put('/:id/status', async (req, res) => {
             order.date_completed = null; // clear this out to prevent undefined state
         }
         if (req.body.status === "Completed" && order.status !== "Completed") {
-            // set date_completed
             // update item stocks
             let promises = order.items.map(item => updateItemStock(item.itemRef._id, item.quantity));
             await Promise.all(promises);    // await for all promises to resolve
@@ -350,7 +376,12 @@ router.put('/:id/status', async (req, res) => {
             await Promise.all(promises);    // wait for all transactions to get items added
             // Find the order again here. The additional query forces the new item stocks to populate.
             order = await Order.findById(order._id);
+            // set date_completed
             order.date_completed = new Date();
+            // If order was not marked as in cart, just set date to now
+            if (order.date_submitted == null) {
+                order.date_submitted = new Date();
+            }
         } else if (req.body.status !== "Completed" && order.status === "Completed") {
             // decrease item stocks
             let promises = order.items.map(item => updateItemStock(item.itemRef._id, -1 * item.quantity));

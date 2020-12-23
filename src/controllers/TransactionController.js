@@ -14,6 +14,7 @@ const Item = require("./../models/Item");
 const Repair = require("./../models/Repair");
 const User = require("./../models/User");
 const _ = require("underscore");
+const { reduce } = require("underscore");
 const config = require("../config")();
 
 router.use(bodyParser.json());
@@ -201,6 +202,34 @@ async function calculateTax(transaction) {
     throw err; // caller will handle it
   }
 }
+
+/**
+ * Adds an item to the active order requests by creating a new order request for it, or if an active
+ * order request exists increments the quantity.
+ * @param {Item} item Item schema to add order request for (or update an existing one)
+ */
+async function addOrUpdateOrderRequest(item) {
+  // First, check if there is an existing order request
+  let order_request = await OrderRequest.findOne({ itemRef: item._id, status: { $in: ['Not Ordered', 'In Cart'] } });
+  if (!order_request) {
+    // Assume that no active order request exists, create one.
+    order_request = await OrderRequest.create({
+      itemRef: item,
+      request: item.name,
+      quantity: item.desired_stock - item.stock,
+      transactions: [],
+      partNumber: '',
+      notes: 'Automatically Created',
+      actions: []
+    });
+  } else {
+    // Update the request's desired quantity.
+    order_request.quantity = item.desired_stock - item.stock;
+    order_request.notes = "Automatically Updated"
+    await order_request.save();
+  }
+}
+
 /*
  Searches for transactions by customer XOR bike XOR transaction description - "GET /transactions/search?customer="
 */
@@ -311,12 +340,22 @@ router.put("/:id/complete", async (req, res) => {
     // Update item inventory
     for (let item of transaction.items) {
       const found_item = await Item.findById(item.item._id);
+      if (found_item.managed) continue; // Don't update stock on managed item
       if (req.body.complete) {
         found_item.stock -= 1;
       } else {
         found_item.stock += 1;
       }
       await found_item.save();
+      // Check if item stock is less than the desired stock
+      if (found_item.stock < found_item.desired_stock) {
+        /**
+         * Note we don't delete this order request if the transaction is reopened.
+         * It's better to order extra than delete an order request that was important
+         */
+        // add order request for item (or update entry)
+        await addOrUpdateOrderRequest(found_item);
+      }
       // send low stock email if needed
       /*
                 Currently disabling this
@@ -626,7 +665,7 @@ router.post("/:id/items", async (req, res) => {
         item: item,
         price: item.wholesale_cost * config.employee_price_multiplier,
       };
-    } 
+    }
     // Otherwise, apply default pricing
     else {
       newItem = { item: item, price: item.standard_price };

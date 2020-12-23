@@ -10,6 +10,7 @@ var OrderSchema = new mongoose.Schema({
     date_submitted: Date,
     date_completed: Date,
     tracking_number: String,
+    freight_charge: Number,
     total_price: {type: Number, default: 0},
     status: String,
     items: [{type: Number, ref: 'OrderRequest'}]
