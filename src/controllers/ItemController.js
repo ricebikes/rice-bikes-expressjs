@@ -23,7 +23,7 @@ router.get('/categories', function (req, res) {
  * GET: /brands
  * Gets distinct brands known to the app, for use when searching
  */
-router.get('/brands', function (req,res) {
+router.get('/brands', function (req, res) {
     Item.distinct('brand', function (err, brands) {
         if (err) return res.status(500).send(err);
         res.status(200).send(brands);
@@ -39,7 +39,7 @@ router.get('/brands', function (req,res) {
 router.get('/sizes', async (req, res) => {
     // Using async notation for cleaner code.
     try {
-        const results = await Item.distinct ('size', {category: req.query.category});
+        const results = await Item.distinct('size', { category: req.query.category });
         res.status(200).send(results);
     } catch (err) {
         res.status(500).send(err);
@@ -67,10 +67,10 @@ router.get('/search', function (req, res) {
     };
     // if our query defines a name, add that here. Required since the name portion uses indexed searching (for speed)
     if (req.query.name) {
-        query_object["$text"] = {"$search": req.query.name};
+        query_object["$text"] = { "$search": req.query.name };
     }
     // nifty one liner to delete any null or undefined values so that we don't have to explicitly check earlier
-    query_object = Object.entries(query_object).reduce((a,[k,v]) => (v == null ? a : {...a, [k]:v}), {});
+    query_object = Object.entries(query_object).reduce((a, [k, v]) => (v == null ? a : { ...a, [k]: v }), {});
     if (Object.keys(query_object).length === 0) {
         // if query object is empty, return an empty array rather than searching
         return res.status(200).send([]);
@@ -96,10 +96,11 @@ router.use(adminMiddleware);
  * standard_price: retail price of item
  * wholesale_cost: wholesale price we pay for item
  * desired_stock: stock of item that should be in shop
+ * minimum_stock: stock of item that *must* be in shop (optional)
  */
 // adds an item to the db. Note that quantity should start at 0
 router.post('/', function (req, res) {
-    const {name, upc, category, size, brand, condition, standard_price, wholesale_cost, desired_stock} = req.body;
+    const { name, upc, category, size, brand, condition, standard_price, wholesale_cost, desired_stock, minimum_stock } = req.body;
     // validate the request before proceeding
     if (!((condition === 'Used' || upc)
         && name
@@ -107,7 +108,7 @@ router.post('/', function (req, res) {
         && brand
         && (standard_price != undefined)
         && (wholesale_cost != undefined)
-        && (desired_stock != undefined))){
+        && (desired_stock != undefined))) {
         return res.status(400).send("Malformed request, missing fields");
     }
     Item.create({
@@ -122,6 +123,7 @@ router.post('/', function (req, res) {
         disabled: false,
         managed: false,
         desired_stock: desired_stock,
+        minimum_stock: minimum_stock,
         stock: 0
     }, function (err, item) {
         if (err) return res.status(500).send(err);
@@ -133,13 +135,22 @@ router.post('/', function (req, res) {
  * Lets an item be updated. Simply overwrites the current item with whatever is sent.
  */
 router.put('/:id', function (req, res) {
-    {
-        Item.findByIdAndUpdate(req.params.id, req.body, {new: true}, function (err, item) {
-            if (err) return res.status(500).send(err);
-            if (!item) return res.status(404).send();
-            return res.status(200).send(item);
-        });
+    const { name, upc, category, size, brand, condition, standard_price, wholesale_cost, desired_stock, minimum_stock } = req.body;
+    // validate the request before proceeding
+    if (!((condition === 'Used' || upc)
+        && name
+        && category
+        && brand
+        && (standard_price != undefined)
+        && (wholesale_cost != undefined)
+        && (desired_stock != undefined))) {
+        return res.status(400).send("Malformed request, missing fields");
     }
+    Item.findByIdAndUpdate(req.params.id, req.body, { new: true }, function (err, item) {
+        if (err) return res.status(500).send(err);
+        if (!item) return res.status(404).send();
+        return res.status(200).send(item);
+    });
 });
 
 /**
@@ -147,7 +158,7 @@ router.put('/:id', function (req, res) {
  * backend, and removing or adding one to a transaction should not be possible.
  */
 router.get('/', function (req, res) {
-    Item.find({managed: false}, function (err, items) {
+    Item.find({ managed: false }, function (err, items) {
         if (err) return res.status(500).send(err);
         return res.status(200).send(items);
     });
