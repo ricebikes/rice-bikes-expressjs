@@ -79,7 +79,13 @@ transactions with the property { "complete": true }.
  */
 router.get("/", async (req, res) => {
   try {
-    const transactions = await Transaction.find(req.query);
+    let query = req.query;
+    // If query requests all transactions waiting on parts, modify it to search for transactions with one or more order requests
+    if (query.waiting_part) {
+      delete query.waiting_part;
+      query['orderRequests.0'] = {'$exists': true}
+    }
+    const transactions = await Transaction.find(query);
     res.status(200).send(transactions);
   } catch (err) {
     res.status(500).send(err);

@@ -208,6 +208,30 @@ router.put('/:id/supplier', async (req, res) => {
 });
 
 /**
+ * PUT /:id/notes: update notes of an order
+ * put body: 
+ * {
+ *    notes: new string to set for notes
+ * }
+ */
+router.put('/:id/notes', async (req, res) => {
+    try {
+        if (req.body.notes == undefined) {
+            return res.status(400).send("No notes string provided");
+        }
+        let order = await Order.findById(req.params.id);
+        if (!order) {
+            return res.status(404).send("No order with provided ID found");
+        }
+        order.notes = req.body.notes;
+        const savedOrder = await order.save();
+        return res.status(200).send(savedOrder);
+    } catch (err) {
+        return res.status(500).send(err);
+    }
+})
+
+/**
  * POST /:id/order-request: adds OrderRequest to order
  * post body:
  * {
