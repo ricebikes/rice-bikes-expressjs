@@ -110,6 +110,8 @@ async function updateItemStock(itemID, quantity) {
 }
 
 
+
+
 /**
  * Moves order request from a request into an actual item on provided transactions. Deletes the reference to
  * the order request, and adds the item. Effectively "fulfills" the order request.
@@ -178,6 +180,34 @@ async function unfulfillOrderRequests(requestID, transactions) {
         transactionRef.total_cost -= price;
         await transactionRef.save()
     }
+}
+
+/**
+ * Removes an order request from a provided order
+ * @param {Order} order order to remove request from
+ * @param {OrderRequest} request request to remove
+ * @returns updated order
+ */
+async function removeOrderRequestFromOrder(order, request) {
+    // remove the requested request from the array
+    order.items = order.items.filter(candidate => {
+        if (candidate._id.toString() === request._id.toString()) {
+            // Adjust price of order.
+            order.total_price -= candidate.itemRef.wholesale_cost * candidate.quantity;
+            return false; // item will be removed
+        }
+        return true;
+    });
+    if (order.status == "Completed") {
+        // The order request will no longer be completed, so we need to unfulfill the transactions associated with it
+        await unfulfillOrderRequests(request._id, request.transactions);
+    }
+    request.status = "Not Ordered";
+    request.supplier = null;
+    request.orderRef = null;
+    await request.save();
+    const finalOrder = await order.save();
+    return finalOrder;
 }
 
 /**
@@ -257,6 +287,10 @@ router.post('/:id/order-request', async (req, res) => {
         // update OrderRequest to match order
         orderRequest.orderRef = order._id;
         orderRequest.status = order.status;
+        if (order.status == "Completed") {
+            // We need to fulfill order requests
+            await fulfillOrderRequests(orderRequest._id, orderRequest.transactions);
+        }
         orderRequest.supplier = order.supplier;
         const savedReq = await orderRequest.save();
         // Add item price to total price of order.
@@ -281,20 +315,7 @@ router.delete('/:id/order-request/:reqId', async (req, res) => {
         if (!order) return res.status(404).send("No order found");
         const orderRequest = await OrderRequest.findById(req.params.reqId);
         if (!orderRequest) return res.status(404).send("Order request not found in this order");
-        // remove the requested request from the array
-        order.items = order.items.filter(candidate => {
-            if (candidate._id.toString() === orderRequest._id.toString()) {
-                // Adjust price of order.
-                order.total_price -= candidate.itemRef.wholesale_cost * candidate.quantity;
-                return false; // item will be removed
-            }
-            return true;
-        });
-        orderRequest.status = "Not Ordered";
-        orderRequest.supplier = null;
-        orderRequest.orderRef = null;
-        await orderRequest.save();
-        const finalOrder = await order.save();
+        const finalOrder = await removeOrderRequestFromOrder(order, orderRequest);
         return res.status(200).send(finalOrder);
     } catch (err) {
         res.status(500).send(err);
@@ -331,9 +352,7 @@ router.delete('/:id', async (req, res) => {
         // Remove the order id from all order requests in order.
         for (let orderReqId of order.items) {
             let orderReq = await OrderRequest.findById(orderReqId);
-            orderReq.orderRef = null;
-            orderReq.status = "Not Ordered";
-            await orderReq.save();
+            await removeOrderRequestFromOrder(order, orderReq);
         }
         await order.remove();
         return res.status(200).send("OK")

@@ -265,43 +265,119 @@ router.put("/:id/quantity", async (req, res) => {
 });
 
 /**
- * PUT: /:id/transactions - update or set the transactions associated with an OrderRequest
- *
- * PUT body:
+ * POST /:id/transaction - add a transaction to an order request.
+ * Transaction IDs can be added multiple times to one order request 
+ * (symbolizes the transaction needing multiple of requested item)
+ * 
+ * This endpoint will update the order request, and will add the 
+ * order request to the transaction itself.
+ * 
+ * POST body:
  * {
- *     transactions: integer IDs of transaction to associate with the OrderRequest
+ *     transaction_id: ID of transaction to add.
  * }
  */
-router.put('/:id/transactions', async (req, res) => {
+router.post('/:id/transaction', async (req, res) => {
     try {
         const orderRequest = await OrderRequest.findById(req.params.id);
-        if (!orderRequest) return res.status(404).send("No matching order request found");
-        if (!req.body.transactions) return res.status(400).send("No transactions specified for association");
-        // Find transactions to remove
-        const removeTransactions = orderRequest.transactions.filter(x => req.body.transactions.indexOf(x) == -1);
-        const addTransactions = req.body.transactions.filter(x => orderRequest.transactions.indexOf(x) == -1);
-        // Remove transactions from order request
-        for (let transaction_id of removeTransactions) {
-            const transactionRef = await Transaction.findById(transaction_id);
-            transactionRef.orderRequests.splice(transactionRef.orderRequests.indexOf(orderRequest._id), 1);
+        if (!orderRequest) return res.status(404).json({ "err": "no matching order request found" });
+        if (!req.body.transaction_id) return res.status(400).json({ "err": "no transaction id provided" });
+        const transaction = await Transaction.findById(req.body.transaction_id);
+        if (!transaction) return res.status(404).json({ "err": "no matching transaction found" });
+        // Do not allow users to add order requests to completed transactions.
+        if (transaction.complete) return res.status(400).json({ "err": "cannot add order request to completed transaction" });
+        if (orderRequest.status == 'Complete') return res.status(400).json({ "err": "cannot add completed order request to transaction" });
+        // Now, add the transaction to the order request and vice versa
+        if (!transaction.orderRequests) transaction.orderRequests = [];
+        transaction.orderRequests.push(orderRequest);
+        await transaction.save();
+        orderRequest.transactions.push(transaction._id);
+        // Add to order request quantity, and update order price if required.
+        orderRequest.quantity += 1;
+        if (orderRequest.orderRef && orderRequest.itemRef) {
+            const order = await Order.findById(orderRequest.orderRef);
+            order.total_price += orderRequest.itemRef.wholesale_cost;
+            await order.save();
+        }
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, `Added transaction ${transaction._id}`);
+        const savedOrderReq = await loggedOrderReq.save();
+        return res.status(200).send(savedOrderReq);
+    } catch (err) {
+        return res.status(500).send(err);
+    }
+});
+
+/**
+ * Deletes an order request from the database. 
+ * Automatically handles removing order request reference from transactions, as well as orders.
+ * @param {OrderRequest} orderRequest Request to delete
+ */
+async function deleteOrderRequest(orderRequest) {
+    if (orderRequest.orderRef) {
+        // Get reference to order this request is in, and update cost.
+        let order = await Order.findById(orderRequest.orderRef);
+        let item = await Item.findById(orderRequest.itemRef);
+        order.total_price -= item.wholesale_cost * orderRequest.quantity;
+        // Remove orderRequest from order.
+        order.items = order.items.splice(order.items.indexOf(orderRequest._id), 1);
+        await order.save();
+    }
+    /**
+     * Special case here: up until this point in the lifecycle of an order request, we try to keep the
+     * transactions' references to an order request in sync with the order request's reference to
+     * the transactions. Once the order is completed however, we want to keep the transaction numbers for
+     * future reference, but we do not want transactions to be "waiting on part", so we let the relationship
+     * lapse. The transaction will no longer have a reference to the order request, but the order request
+     * will have a reference to the transaction.
+     */
+    if (orderRequest.status != 'Completed') {
+        // Remove orderRequest from transactions
+        for (let transaction of orderRequest.transactions) {
+            let transactionRef = await Transaction.findById(transaction);
+            let index = transactionRef.orderRequests.indexOf(orderRequest._id);
+            transactionRef.orderRequests.splice(index, 1);
             await transactionRef.save();
-            let index = orderRequest.transactions.indexOf(transaction_id);
-            orderRequest.transactions.splice(index, 1);
         }
-        orderRequest = await orderRequest.save()
-        // Add transactions to order request
-        for (let transaction_id of addTransactions) {
-            const locatedTransaction = await Transaction.findById(transaction_id);
-            if (!locatedTransaction) return res.status(404).send(`Transaction ID ${transaction_id} specified could not be found`);
-            locatedTransaction.orderRequests.push(orderRequest._id);
-            await locatedTransaction.save();
-            transactions.push(locatedTransaction._id);
+    }
+    await orderRequest.remove();
+}
+
+/**
+ * DELETE /:id/transaction/transactionID - removes a transaction from an order request by its ID
+ * 
+ * Will also update the transaction to remove the order request.
+ * If an order request has a transaction associated multiple times, this endpoint will only remove it once.
+ */
+router.delete('/:id/transaction/:transactionID', async (req, res) => {
+    try {
+        const orderRequest = await OrderRequest.findById(req.params.id);
+        if (!orderRequest) return res.status(404).json({ "err": "no matching order request found" });
+        const transaction = await Transaction.findById(req.params.transactionID);
+        if (!transaction) return res.status(404).json({ "err": "no matching transaction found" });
+        // Now remove the transaction from the order request and vice versa
+        let index = orderRequest.transactions.indexOf(transaction._id);
+        if (index == -1) return res.status(404).json({ "err": "transaction was not found attached to order request" });
+        orderRequest.transactions.splice(index, 1);
+        // Decrease order request quantity, and update order price if required.
+        orderRequest.quantity -= 1;
+        if (orderRequest.orderRef && orderRequest.itemRef) {
+            const order = await Order.findById(orderRequest.orderRef);
+            order.total_price -= orderRequest.itemRef.wholesale_cost;
+            await order.save();
         }
-        orderRequest.transactions = orderRequest.transactions.concat(transactions);
-        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
-            "Updated transactions");
-        const finalOrderReq = await loggedOrderReq.save();
-        return res.status(200).send(finalOrderReq);
+        index = transaction.orderRequests.findIndex(x => x._id.toString() == orderRequest._id.toString());
+        if (index == -1) return res.status(404).json({ "err": "order request was not found attached to transaction" });
+        // Note that we do allow users to remove order requests from completed transactions (just not add new ones).
+        transaction.orderRequests.splice(index, 1);
+        await transaction.save();
+        if (orderRequest.quantity == 0) {
+            // All transactions have been removed from the order request, and we can assume that the request is not useful now. Delete it.
+            await deleteOrderRequest(orderRequest);
+            return res.status(204).send({}); // We have deleted order request, so no way to send it.
+        }
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, `Removed transaction ${transaction._id}`);
+        const savedOrderReq = await loggedOrderReq.save();
+        return res.status(200).send(savedOrderReq);
     } catch (err) {
         return res.status(500).send(err);
     }
@@ -314,33 +390,7 @@ router.delete('/:id', async (req, res) => {
     try {
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).send("No matching order request found");
-        if (orderRequest.orderRef) {
-            // Get reference to order this request is in, and update cost.
-            let order = await Order.findById(orderRequest.orderRef);
-            let item = await Item.findById(orderRequest.itemRef);
-            order.total_price -= item.wholesale_cost * orderRequest.quantity;
-            // Remove orderRequest from order.
-            order.items = order.items.splice(order.items.indexOf(orderRequest._id), 1);
-            await order.save();
-        }
-        /**
-         * Special case here: up until this point in the lifecycle of an order request, we try to keep the
-         * transactions' references to an order request in sync with the order request's reference to
-         * the transactions. Once the order is completed however, we want to keep the transaction numbers for
-         * future reference, but we do not want transactions to be "waiting on part", so we let the relationship
-         * lapse. The transaction will no longer have a reference to the order request, but the order request
-         * will have a reference to the transaction.
-         */
-        if (orderRequest.status != 'Completed') {
-            // Remove orderRequest from transactions
-            for (let transaction of orderRequest.transactions) {
-                let transactionRef = await Transaction.findById(transaction);
-                let index = transactionRef.orderRequests.indexOf(orderRequest._id);
-                transactionRef.orderRequests.splice(index, 1);
-                await transactionRef.save();
-            }
-        }
-        await orderRequest.remove();
+        await deleteOrderRequest(orderRequest);
         return res.status(200).send("OK");
     } catch (err) {
         return res.status(500).send(err);

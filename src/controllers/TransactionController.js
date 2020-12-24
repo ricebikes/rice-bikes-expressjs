@@ -14,7 +14,6 @@ const Item = require("./../models/Item");
 const Repair = require("./../models/Repair");
 const User = require("./../models/User");
 const _ = require("underscore");
-const { reduce } = require("underscore");
 const config = require("../config")();
 
 router.use(bodyParser.json());
@@ -392,83 +391,6 @@ router.put("/:id/complete", async (req, res) => {
     );
     const savedTransaction = await loggedTransaction.save();
     return res.status(200).send(savedTransaction);
-  } catch (err) {
-    return res.status(500).send(err);
-  }
-});
-
-/**
- * Adds an order request to a transaction's list of waiting requests. 
- * These are usually parts that a transaction is waiting on to arrive.
- * @param requestid: ID of order request to associate.
- */
-router.post("/:id/order-request", async (req, res) => {
-  try {
-    const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) {
-      return res.status(404).send("No matching transaction found");
-    }
-    if (transaction.is_paid || transaction.complete) {
-      // Do not allow order request to be associated
-      return res.status(400).send("Transaction has already been completed, cannot add request.")
-    }
-    const orderRequest = await OrderRequest.findById(req.body.requestid);
-    if (!orderRequest) {
-      return res.status(404).send("Could not find specified order request");
-    }
-    // Raise the number of requested items by 1
-    orderRequest.quantity += 1;
-    orderRequest.transactions.push(transaction._id);
-    const savedRequest = await orderRequest.save();
-    transaction.orderRequests.push(savedRequest);
-    loggedTransaction = await addLogToTransaction(transaction, req, `Marked as waiting on request #${orderRequest._id}`);
-    await loggedTransaction.save();
-    return res.status(200).send(loggedTransaction);
-  } catch (err) {
-    res.status(500).send(err);
-  }
-});
-
-
-/**
- * Deletes a part request for a transaction, by its ID.
- * @param req_id: ID of the order request to delete from the transaction given by "id"
- */
-router.delete('/:id/order-request/:req_id', async (req, res) => {
-  try {
-    const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) {
-      return res.status(404).send("No matching transaction found");
-    }
-    if (transaction.is_paid || transaction.complete) {
-      return res.status(400).send("Cannot modify requests on completed transaction");
-    }
-    const index = transaction.orderRequests.findIndex(element => element._id == req.params.req_id)
-    if (index == -1) {
-      // order request was not found.
-      return res.status(404).send("Order request not found attached to transaction");
-    }
-    let locatedOrderRequest = await OrderRequest.findById(req.params.req_id);
-    locatedOrderRequest.quantity -= 1;
-    // Remove transaction from order request
-    locatedOrderRequest.transactions.splice(locatedOrderRequest.transactions.indexOf(transaction._id), 1);
-    await locatedOrderRequest.save()
-    transaction.orderRequests.splice(index, 1);
-    let loggedTransaction = await addLogToTransaction(transaction, req, `removed part request ${req.params.req_id}`);
-    let savedTransaction = await loggedTransaction.save();
-    // If located order request quantity is now zero, delete the request.
-    if (locatedOrderRequest.quantity <= 0) {
-      // Delete the order request entirely.
-      if (locatedOrderRequest.orderRef) {
-        // Get reference to order this request is in, and update cost.
-        let order = await Order.findById(locatedOrderRequest.orderRef);
-        // Remove orderRequest from order.
-        order.items = order.items.splice(order.items.indexOf(locatedOrderRequest._id), 1);
-        await order.save();
-      }
-      await locatedOrderRequest.remove();
-    }
-    res.status(200).send(savedTransaction);
   } catch (err) {
     return res.status(500).send(err);
   }
