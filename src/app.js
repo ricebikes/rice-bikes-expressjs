@@ -43,14 +43,14 @@ mailer.extend(app, {
 });
 
 /* Register routes */
-app.use('/api/metrics', AnalyticsController); // do not use analytics as endpoint, firefox has bug
-app.use('/api/auth', AuthController);
-app.use('/api/users', UserController);
-app.use('/api/transactions', TransactionController);
-app.use('/api/items', ItemController);
-app.use('/api/repairs', RepairController);
-app.use('/api/customers', CustomerController);
-app.use('/api/orders',OrderController);
-app.use('/api/order-requests', OrderRequestController);
+app.use('/api/metrics', AnalyticsController.router); // do not use analytics as endpoint, firefox has bug
+app.use('/api/auth', AuthController.router);
+app.use('/api/users', UserController.router);
+app.use('/api/transactions', TransactionController.router);
+app.use('/api/items', ItemController.router);
+app.use('/api/repairs', RepairController.router);
+app.use('/api/customers', CustomerController.router);
+app.use('/api/orders',OrderController.router);
+app.use('/api/order-requests', OrderRequestController.router);
 
 module.exports = app;

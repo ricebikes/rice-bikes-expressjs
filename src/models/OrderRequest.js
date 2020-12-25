@@ -18,10 +18,8 @@ const OrderRequestSchema = new mongoose.Schema({
     itemRef: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'}, // Item that will be ordered
     orderRef: {type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null},
     notes: String, // Generic transaction notes
-    // This should not be updated in orderRequestController. Modifications to the order holding this orderRequest should change this status
-    status: {type: String, default: "Not Ordered"}, 
-    // This should not be updated in orderRequestController. Modifications to the order holding this orderRequest should change this status
-    supplier: String,
+    status: {type: String, default: "Not Ordered"}, // Modifications to order holding this request should change this status
+    supplier: String, // Modifications to order holding this request should change the supplier
     // Track actions taken on Order Requests.
     actions: [{
         employee: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
@@ -34,10 +32,9 @@ const autoPopulate = function(next) {
     this.populate('itemRef');
     this.populate('actions.employee');
     /*
-     * Note: transaction is intentionally not automatically populated. Populate Order Request's transactions on a
-     * case by case basis.
+     * Note: transaction is intentionally not automatically populated. To do so will create a circular dependency
      *
-     * Do NOT autopopulate the orderRef. Doing so creates a circular dependency.
+     * Do NOT auto populate the orderRef. Doing so creates a circular dependency.
      */
     next();
 };

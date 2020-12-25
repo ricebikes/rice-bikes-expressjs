@@ -82,7 +82,7 @@ router.get("/", async (req, res) => {
     // If query requests all transactions waiting on parts, modify it to search for transactions with one or more order requests
     if (query.waiting_part) {
       delete query.waiting_part;
-      query['orderRequests.0'] = {'$exists': true}
+      query['orderRequests.0'] = { '$exists': true }
     }
     const transactions = await Transaction.find(query);
     res.status(200).send(transactions);
@@ -213,7 +213,7 @@ async function calculateTax(transaction) {
  * order request exists increments the quantity.
  * @param {Item} item Item schema to add order request for (or update an existing one)
  */
-async function addOrUpdateOrderRequest(item) {
+async function createOrUpdateOrderRequest(item) {
   // First, check if there is an existing order request
   let order_request = await OrderRequest.findOne({ itemRef: item._id, status: { $in: ['Not Ordered', 'In Cart'] } });
   if (!order_request) {
@@ -359,7 +359,7 @@ router.put("/:id/complete", async (req, res) => {
          * It's better to order extra than delete an order request that was important
          */
         // add order request for item (or update entry)
-        await addOrUpdateOrderRequest(found_item);
+        await createOrUpdateOrderRequest(found_item);
       }
       // send low stock email if needed
       /*
@@ -562,6 +562,45 @@ router.delete("/:id/bikes/:bike_id", async (req, res) => {
 });
 
 /**
+ * 
+ * @param {Transaction} transaction Transaction to add item to
+ * @param {Item} item Item to add
+ */
+async function addItemToTransaction(transaction, item) {
+  let newItem;
+  // Check to see if a custom price was given
+  if (item.condition == 'Used' && req.body.custom_price != null) {
+    let price = req.body.custom_price;
+    if (typeof price != 'number') {
+      // Parse price
+      price = parseFloat(price);
+    }
+    newItem = {
+      item: item,
+      price: price
+    };
+  }
+  // Check if "customer" is employee
+  else if (transaction.employee && item.wholesale_cost > 0) {
+    // Apply employee pricing for this item.
+    newItem = {
+      item: item,
+      price: item.wholesale_cost * config.employee_price_multiplier,
+    };
+  }
+  // Otherwise, apply default pricing
+  else {
+    newItem = { item: item, price: item.standard_price };
+  }
+  transaction.total_cost += newItem.price;
+  transaction.items.push(newItem);
+  // we save the transaction here to make sure the first item we added is saved to the database
+  await transaction.save(); // save transaction before working on tax
+  const taxedTransaction = await calculateTax(transaction);
+  return taxedTransaction;
+}
+
+/**
  Adds an existing item to the transaction - "POST /transactions/items"
  Requires user's ID in header
  @param _id: id of item to add
@@ -573,36 +612,8 @@ router.post("/:id/items", async (req, res) => {
     if (!transaction) return res.status(404).send("No Transaction found");
     const item = await Item.findById(req.body._id);
     if (!item) return res.status(404).send("No item found");
-    let newItem;
-    // Check to see if a custom price was given
-    if (item.condition == 'Used' && req.body.custom_price != null) {
-      let price = req.body.custom_price;
-      if (typeof price != 'number') {
-        // Parse price
-        price = parseFloat(price);
-      }
-      newItem = {
-        item: item,
-        price: price
-      };
-    }
-    // Check if "customer" is employee
-    else if (transaction.employee && item.wholesale_cost > 0) {
-      // Apply employee pricing for this item.
-      newItem = {
-        item: item,
-        price: item.wholesale_cost * config.employee_price_multiplier,
-      };
-    }
-    // Otherwise, apply default pricing
-    else {
-      newItem = { item: item, price: item.standard_price };
-    }
-    transaction.total_cost += newItem.price;
-    transaction.items.push(newItem);
-    // we save the transaction here to make sure the first item we added is saved to the database
-    await transaction.save(); // save transaction before working on tax
-    const taxedTransaction = await calculateTax(transaction);
+    // Add the item to the transaction
+    const taxedTransaction = await addItemToTransaction(transaction, item);
     const loggedTransaction = await addLogToTransaction(
       taxedTransaction,
       req,
@@ -616,6 +627,22 @@ router.post("/:id/items", async (req, res) => {
 });
 
 /**
+ * 
+ * @param {Transaction} transaction Transaction to remove item from
+ * @param {Item} item item to remove
+ */
+async function removeItemFromTransaction(transaction, item) {
+  // Find index of item to remove
+  let index = transaction.items.findIndex(x => x.item._id.toString() == item._id.toString())
+  if (index == -1) throw { "err": "could not find requested item in transaction's items array to delete" };
+  if (transaction.items[index].item.managed) throw { "err": "cannot remove 'managed' item" };
+  transaction.items.splice(index, 1);
+  transaction = await transaction.save();
+  let taxedTransaction = await calculateTax(transaction);
+  return taxedTransaction;
+}
+
+/**
  * Requires user's ID in header
  * Deletes an item from a transaction - DELETE /transactions/$id/items
  */
@@ -623,22 +650,10 @@ router.delete("/:id/items/:item_id", async (req, res) => {
   try {
     let transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404);
-    let action_description;
-    for (let i = 0; i < transaction.items.length; i++) {
-      let item = transaction.items[i].item;
-      if (item._id.toString() === req.params.item_id) {
-        // If the item is managed, deny the user from removing it
-        if (item.managed)
-          return res.status(403).send("Cannot delete this type of item");
-        // decrease total_cost
-        transaction.total_cost -= transaction.items[i].price;
-        // simply delete the item by splicing it from the item list
-        transaction.items.splice(i, 1);
-        action_description = `Deleted item ${item.name}`;
-        break;
-      }
-    }
-    let taxedTransaction = await calculateTax(transaction);
+    let item = await Item.findById(req.params.item_id);
+    if (!item) return res.status(404).json({"err": "could not find item to remove"})
+    let action_description = `Deleted item ${item.name}`;
+    let taxedTransaction = await removeItemFromTransaction(transaction, item);
     let loggedTransaction = await addLogToTransaction(
       taxedTransaction,
       req,
@@ -753,4 +768,35 @@ router.get("/:id/email-receipt", async (req, res) => {
   }
 });
 
-module.exports = router;
+/**
+ * Removes an order request from a transaction
+ * @param {Transaction} transaction Transaction schema to remove order request from
+ * @param {OrderRequest} orderRequest Order request to remove
+ */
+async function removeOrderRequestFromTransaction(transaction, orderRequest) {
+  let index = transaction.orderRequests.findIndex(x => x._id.toString() == orderRequest._id.toString());
+  if (index == -1 ) throw {"err": "No matching order request found to remove from transaction", status:404};
+  transaction.orderRequests.splice(index, 1);
+  let updatedTransaction = await transaction.save();
+  return updatedTransaction;
+}
+
+/**
+ * Adds an order request to a transaction
+ * @param {Transaction} transaction Transaction schema to add order request to
+ * @param {OrderRequest} orderRequest Order request to add
+ */
+async function addOrderRequestToTransaction(transaction, orderRequest) {
+  if (transaction.complete) throw {"err": "Cannot add order requests to complete transactions", status:400};
+  transaction.orderRequests.push(orderRequest);
+  let updatedTransaction = await transaction.save();
+  return updatedTransaction;
+}
+
+module.exports = {
+  router: router, 
+  addItemToTransaction: addItemToTransaction, 
+  removeItemFromTransaction: removeItemFromTransaction,
+  addOrderRequestToTransaction: addOrderRequestToTransaction,
+  removeOrderRequestFromTransaction: removeOrderRequestFromTransaction,
+};

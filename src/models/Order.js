@@ -19,8 +19,7 @@ var OrderSchema = new mongoose.Schema({
 // auto populate item list when querying orders
 // avoid autopopulating transaction
 var autoPopulate = function (next) {
-    // this does not create a circular dependency because populate is not recursive
-    // thanks to mongoDB for enabling my poor design decisions
+    // this does not create a circular dependency because order requests do not auto populate their references to orders
     this.populate('items');
     next();
 };

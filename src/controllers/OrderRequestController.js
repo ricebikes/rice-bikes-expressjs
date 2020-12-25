@@ -19,6 +19,9 @@ const Order = require('./../models/Order');
 const OrderRequest = require('../models/OrderRequest');
 const User = require('../models/User');
 const Transaction = require('./../models/Transaction');
+const ItemController = require('./ItemController');
+const TransactionController = require('./TransactionController');
+const OrderController = require('./OrderController');
 
 router.use(bodyParser.json());
 
@@ -155,8 +158,7 @@ router.post('/', async (req, res) => {
         // Add the order request to transactions
         for (let transaction of loggedOrderReq.transactions) {
             let transactionRef = await Transaction.findById(transaction);
-            transactionRef.orderRequests.push(loggedOrderReq._id);
-            await transactionRef.save();
+            await TransactionController.addOrderRequestToTransaction(transactionRef, loggedOrderReq);
         }
         const savedOrderReq = await loggedOrderReq.save();
         return res.status(200).send(savedOrderReq);
@@ -242,23 +244,23 @@ router.put('/:id/notes', async (req, res) => {
  */
 router.put("/:id/quantity", async (req, res) => {
     try {
-        const orderrequest = await OrderRequest.findById(req.params.id);
-        if (!orderrequest) return res.status(404).send("No matching order request found");
+        const orderRequest = await OrderRequest.findById(req.params.id);
+        if (!orderRequest) return res.status(404).send("No matching order request found");
         if (!req.body.quantity) return res.status(400).send("No new quantity specified");
-        if (orderrequest.transactions && req.body.quantity < orderrequest.transactions.length) {
+        if (orderRequest.transactions && req.body.quantity < orderRequest.transactions.length) {
             return res.status(400).send("Cannot set quantity below number of attached transactions");
         }
-        if (orderrequest.orderRef) {
+        if (orderRequest.orderRef) {
             // Update price of the order
-            let order = await Order.findById(orderrequest.orderRef);
-            order.total_price += orderrequest.itemRef.wholesale_cost * (req.body.quantity - orderrequest.quantity);
-            await order.save();
+            let order = await Order.findById(orderRequest.orderRef);
+            let newPrice = order.total_price + orderRequest.itemRef.wholesale_cost * (req.body.quantity - orderRequest.quantity);
+            await OrderController.setOrderPrice(order, newPrice);
         }
-        const loggedorderreq = await addLogToOrderRequest(orderrequest, req,
-            `Changed quantity from ${orderrequest.quantity} to ${req.body.quantity}`);
-        loggedorderreq.quantity = req.body.quantity;
-        const finalorderreq = await loggedorderreq.save();
-        return res.status(200).send(finalorderreq);
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
+            `Changed quantity from ${orderRequest.quantity} to ${req.body.quantity}`);
+        loggedOrderReq.quantity = req.body.quantity;
+        const finalOrderReq = await loggedOrderReq.save();
+        return res.status(200).send(finalOrderReq);
     } catch (err) {
         return res.status(500).send(err);
     }
@@ -343,6 +345,17 @@ async function deleteOrderRequest(orderRequest) {
 }
 
 /**
+ * 
+ * @param {OrderRequest} request Request to set supplier for
+ * @param {String} supplier string to set for supplier
+ */
+async function setSupplier(request, supplier) {
+    request.supplier = supplier;
+    const savedReq = await request.save();
+    return savedReq;
+}
+
+/**
  * DELETE /:id/transaction/transactionID - removes a transaction from an order request by its ID
  * 
  * Will also update the transaction to remove the order request.
@@ -382,6 +395,133 @@ router.delete('/:id/transaction/:transactionID', async (req, res) => {
         return res.status(500).send(err);
     }
 });
+
+/**
+ * Moves order request from a request into an actual item on provided transactions. Deletes the reference to
+ * the order request, and adds the item. Effectively "fulfills" the order request.
+ * @param {OrderRequest} requestRef: Order request to fulfill on transactions
+ * @param {number[]} transactions: transactions to add item to. One of the item associated to the request will be added to each transaction in the array
+ *                                  (so if a transaction appears twice, two items will be added)
+ */
+async function fulfillTransactionsOrderRequest(requestRef, transactions) {
+    // not using try/catch because we want errors to be caught by callers
+    if (!requestRef) {
+        throw { err: "Could not locate order request to fulfill" };
+    }
+    const itemRef = await Item.findById(requestRef.itemRef._id);
+    if (!itemRef) {
+        // throw error so the frontend knows something went wrong
+        throw { err: "Could not locate item to add to transaction" };
+    }
+    for (let transaction_id of transactions) {
+        const transactionRef = await Transaction.findById(transaction_id);
+        if (!transactionRef) {
+            throw { err: "Could not find transaction to add item to" };
+        }
+        transactionRef = await TransactionController.addItemToTransaction(transactionRef, itemRef);
+        /**
+         * Note that we do not update the order request here. Once an order request is completed, the relationship between the
+         * transaction's orderRequests field and the order request's transactions field can break, and will.
+         */
+        transactionRef = await TransactionController.removeOrderRequestFromTransaction(transactionRef, requestRef);
+        await transactionRef.save()
+    }
+}
+
+/**
+ * Moves actual item on provided transactions back to an order request. Deletes the reference to
+ * the item. Effectively "unfulfills" the order request.
+ * @param {OrderRequest} requestRef: ID of order request to unfulfill on transactions
+ * @param {number[]} transactions: transactions to add item to. One of the item associated to the request will be added to each transaction in the array
+ *                                  (so if a transaction appears twice, two items will be added)
+ */
+async function unfulfillTransactionsOrderRequest(requestRef, transactions) {
+    // not using try/catch because we want errors to be caught by callers
+    if (!requestRef) {
+        throw { err: "Could not locate order request to add to transaction" }
+    }
+    const itemRef = await Item.findById(requestRef.itemRef._id);
+    if (!itemRef) {
+        // throw error so the frontend knows something went wrong
+        throw { err: "Could not locate item to remove from transaction" };
+    }
+    for (let transaction_id of transactions) {
+        const transactionRef = await Transaction.findById(transaction_id);
+        if (!transactionRef) {
+            throw { err: "Could not find transaction to add item to" };
+        }
+        // Remove item from transaction
+        transactionRef = await TransactionController.removeItemFromTransaction(transactionRef, itemRef);
+        /**
+         * Note that we do not update the order request here. Once an order request is completed, the relationship between the
+         * transaction's orderRequests field and the order request's transactions field can break, and will.
+         */
+        transactionRef = await TransactionController.addOrderRequestToTransaction(transactionRef, requestRef);
+        await transactionRef.save()
+    }
+}
+
+/**
+ * Updates the status of an order request. DOES NOT save the order request
+ * If the request is marked as complete (or marked as incomplete when it previously was completed), 
+ * this function will also edit the stock of any attached items, as well as update transactions attached to the request
+ * @param {OrderRequest} orderRequest Order request to set status for
+ * @param {string} status Status value to set for order request
+ */
+async function setRequestStatus(orderRequest, status) {
+    if (orderRequest.status != 'Completed' && status == 'Completed') {
+        /**
+         * Need to update stock of attached item, as well as add the item to
+         * any transactions waiting for it to arrive
+         */
+        orderRequest.status = status;
+        orderRequest = await orderRequest.save();
+        await ItemController.increaseItemStock(orderRequest.itemRef._id, orderRequest.quantity);
+        await fulfillTransactionsOrderRequest(orderRequest, orderRequest.transactions);
+    } else if (orderRequest.status == 'Completed' && status != 'Completed') {
+        /**
+         * Need to update stock of attached item, as well as add the order request back to
+         * any transactions waiting for it to arrive
+         */
+        orderRequest.status = status;
+        /**
+         * Save the request before dropping item stock. 
+         * Otherwise item control might create a new duplicate order request
+         */
+        orderRequest = await orderRequest.save();
+        await ItemController.decreaseItemStock(orderRequest.itemRef._id, orderRequest.quantity);
+        await unfulfillTransactionsOrderRequest(orderRequest, orderRequest.transactions);
+    } else {
+        orderRequest.status = status;
+    }
+    return orderRequest;
+}
+
+/**
+ * Adds an order to an order request
+ * @param {OrderRequest} request to add order to
+ * @param {Order} order order to add to request
+ */
+async function addOrderToOrderRequest(request, order) {
+    request.orderRef = order._id;
+    request = await setRequestStatus(request, order.status);
+    request.supplier = order.supplier;
+    const savedRequest = await request.save();
+    return savedRequest;
+}
+
+/**
+ * Removes an order from an order request
+ * @param {OrderRequest} request to add order to
+ * @param {Order} order order to add to request
+ */
+async function removeOrderFromRequest(request, order) {
+    request.orderRef = null;
+    request = await setRequestStatus(request, 'Not Ordered');
+    request.supplier = null;
+    const savedRequest = await request.save();
+    return savedRequest;
+}
 
 /**
  * DELETE: /:id - deletes an OrderRequest by its ID
@@ -433,4 +573,10 @@ router.put('/:id/item', async (req, res) => {
     }
 });
 
-module.exports = router;
+module.exports = {
+    router: router,
+    addOrderToOrderRequest: addOrderToOrderRequest,
+    removeOrderFromRequest: removeOrderFromRequest,
+    setRequestStatus: setRequestStatus,
+    setSupplier: setSupplier
+};

@@ -31,7 +31,7 @@ router.get('/', function (req, res) {
       // parse the XML.
       // notice the second argument - it's an object of options for the parser, one to strip the namespace
       // prefix off of tags and another to prevent the parser from creating 1-element arrays.
-      xmlParser(body, {tagNameProcessors: [stripPrefix], explicitArray: false}, function (err, result) {
+      xmlParser(body, { tagNameProcessors: [stripPrefix], explicitArray: false }, function (err, result) {
         if (err) return res.status(500).send();
 
         serviceResponse = result.serviceResponse;
@@ -39,32 +39,32 @@ router.get('/', function (req, res) {
         var authSucceeded = serviceResponse.authenticationSuccess;
         if (authSucceeded) {
           // see if this netID is in the list of users.
-          User.findOne({username: authSucceeded.user}, function (err, user) {
+          User.findOne({ username: authSucceeded.user }, function (err, user) {
             if (err) return res.status(500).send();
             if (!user) {
-              return res.status(401).json({success: false, message: "Your net ID is not listed as a mechanic"})
+              return res.status(401).json({ success: false, message: "Your net ID is not listed as a mechanic" })
             }
             //quick explanation of a JWT: essentially a symmetrically encrypted key, designed to be readable by anyone
             // but not allow them to modify its contents. JWT is signed with the key "secret"
             // we will sign the Rice IDP payload, as well as our own payload from the mongodb database
             let token = jwt.sign({
-                user:{
-                  username: user.username,
-                  roles: user.roles,
-                },
-                idp_data:authSucceeded
-            },config.secret);
+              user: {
+                username: user.username,
+                roles: user.roles,
+              },
+              idp_data: authSucceeded
+            }, config.secret);
             // send our token to the frontend! now, whenever the user tries to access a resource, we check their
             // token by verifying it and seeing if the username contained in the token allows this user to access
             // the requested resource.
             return res.json({
-                success: true,
-                message: 'CAS authentication success',
-                token: token
+              success: true,
+              message: 'CAS authentication success',
+              token: token
             });
           });
         } else if (serviceResponse.authenticationFailure) {
-          return res.status(401).json({success: false, message: 'CAS authentication failed'});
+          return res.status(401).json({ success: false, message: 'CAS authentication failed' });
         } else {
           return res.status(500).send();
         }
@@ -75,4 +75,4 @@ router.get('/', function (req, res) {
   }
 });
 
-module.exports = router;
+module.exports = { router: router };

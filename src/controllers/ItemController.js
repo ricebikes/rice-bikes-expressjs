@@ -164,4 +164,36 @@ router.get('/', function (req, res) {
     });
 });
 
-module.exports = router;
+/**
+ * Raises the stock of an Item asynchronously
+ * @param itemID: ID of Item to update stock of
+ * @param quantity: amount to raise stock of item
+ * @return {Promise<OrderRequest>}
+ */
+async function increaseItemStock(itemID, quantity) {
+    // not using try/catch because we want errors to be caught by callers
+    const itemRef = await Item.findById(itemID);
+    if (!itemRef) {
+        // throw error so the frontend knows something went wrong
+        throw { err: "Stock update requested for invalid item" };
+    }
+    itemRef.stock += quantity;
+    const restockedItem = await itemRef.save();
+    if (!restockedItem) {
+        throw { err: "Failed to save new stock state of item" };
+    }
+    return restockedItem;
+}
+
+/**
+ * Lowers the stock of an Item asynchronously
+ * @param itemID: ID of Item to update stock of
+ * @param quantity: amount to lower stock of item
+ * @return {Promise<OrderRequest>}
+ */
+async function decreaseItemStock(itemID, quantity) {
+    let restockedItem = await increaseItemStock(itemID, (-1) * quantity);
+    return restockedItem;
+}
+
+module.exports = { router: router, increaseItemStock: increaseItemStock, decreaseItemStock: decreaseItemStock };

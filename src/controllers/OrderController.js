@@ -10,7 +10,8 @@ let express = require('express');
 let router = express.Router();
 let authMiddleware = require('../middleware/AuthMiddleware');
 let Order = require('./../models/Order');
-let Transaction = require('./../models/Transaction');
+let OrderRequestController = require('./OrderRequestController');
+let ItemController = require('./ItemController');
 let bodyParser = require('body-parser');
 let adminMiddleware = require('../middleware/AdminMiddleware');
 let Item = require('./../models/Item');
@@ -87,103 +88,9 @@ router.post('/', async (req, res) => {
     }
 });
 
-/**
- * Updates the stock of an Item asynchronously
- * used when an order is marked as completed, to increase stock of items in database
- * @param itemID: ID of Item to update stock of
- * @param quantity: quantity of item that has been shipped
- * @return {Promise<OrderRequest>}
- */
-async function updateItemStock(itemID, quantity) {
-    // not using try/catch because we want errors to be caught by callers
-    const itemRef = await Item.findById(itemID);
-    if (!itemRef) {
-        // throw error so the frontend knows something went wrong
-        throw { err: "Stock update requested for invalid item" };
-    }
-    itemRef.stock += quantity;
-    const restockedItem = await itemRef.save();
-    if (!restockedItem) {
-        throw { err: "Failed to save new stock state of item" };
-    }
-    return restockedItem;
-}
-
-
-
 
 /**
- * Moves order request from a request into an actual item on provided transactions. Deletes the reference to
- * the order request, and adds the item. Effectively "fulfills" the order request.
- * @param {ObjectID} requestID: ID of order request to fulfill on transactions
- * @param {number[]} transactions: transactions to add item to. One of the item associated to the request will be added to each transaction in the array
- *                                  (so if a transaction appears twice, two items will be added)
- */
-async function fulfillOrderRequests(requestID, transactions) {
-    // not using try/catch because we want errors to be caught by callers
-    const requestRef = await OrderRequest.findById(requestID);
-    if (!requestRef) {
-        throw { err: "Could not locate order request to fulfill" };
-    }
-    const itemRef = await Item.findById(requestRef.itemRef._id);
-    if (!itemRef) {
-        // throw error so the frontend knows something went wrong
-        throw { err: "Could not locate item to add to transaction" };
-    }
-    for (let transaction_id of transactions) {
-        const transactionRef = await Transaction.findById(transaction_id);
-        if (!transactionRef) {
-            throw { err: "Could not find transaction to add item to" };
-        }
-        let price = (transactionRef.employee && (itemRef.wholesale_cost > 0)) ? itemRef.wholesale_cost * config.employee_price_multiplier : itemRef.standard_price;
-        transactionRef.items.push({ item: itemRef, price: price });
-        /**
-         * Note that we do not update the order request here. Once an order request is completed, the relationship between the
-         * transaction's orderRequests field and the order request's transactions field can break, and will.
-         */
-        transactionRef.orderRequests.splice(transactionRef.orderRequests.findIndex(x => x._id == requestRef._id), 1)
-        transactionRef.total_cost += price;
-        await transactionRef.save()
-    }
-}
-
-/**
- * Moves actual item on provided transactions back to an order request. Deletes the reference to
- * the item. Effectively "unfulfills" the order request.
- * @param {ObjectID} requestID: ID of order request to unfulfill on transactions
- * @param {number[]} transactions: transactions to add item to. One of the item associated to the request will be added to each transaction in the array
- *                                  (so if a transaction appears twice, two items will be added)
- */
-async function unfulfillOrderRequests(requestID, transactions) {
-    // not using try/catch because we want errors to be caught by callers
-    const requestRef = await OrderRequest.findById(requestID);
-    if (!requestRef) {
-        throw { err: "Could not locate order request to add to transaction" }
-    }
-    const itemRef = await Item.findById(requestRef.itemRef._id);
-    if (!itemRef) {
-        // throw error so the frontend knows something went wrong
-        throw { err: "Could not locate item to remove from transaction" };
-    }
-    for (let transaction_id of transactions) {
-        const transactionRef = await Transaction.findById(transaction_id);
-        if (!transactionRef) {
-            throw { err: "Could not find transaction to add item to" };
-        }
-        transactionRef.items.splice(transactionRef.items.findIndex(x => x.item._id.toString() == itemRef._id.toString()), 1);
-        /**
-         * Note that we do not update the order request here. Once an order request is completed, the relationship between the
-         * transaction's orderRequests field and the order request's transactions field can break, and will.
-         */
-        transactionRef.orderRequests.push(requestRef);
-        let price = (transactionRef.employee && (itemRef.wholesale_cost > 0)) ? itemRef.wholesale_cost * config.employee_price_multiplier : itemRef.standard_price;
-        transactionRef.total_cost -= price;
-        await transactionRef.save()
-    }
-}
-
-/**
- * Removes an order request from a provided order
+ * Removes an order request from a provided order, and removes the order from that order request
  * @param {Order} order order to remove request from
  * @param {OrderRequest} request request to remove
  * @returns updated order
@@ -198,14 +105,7 @@ async function removeOrderRequestFromOrder(order, request) {
         }
         return true;
     });
-    if (order.status == "Completed") {
-        // The order request will no longer be completed, so we need to unfulfill the transactions associated with it
-        await unfulfillOrderRequests(request._id, request.transactions);
-    }
-    request.status = "Not Ordered";
-    request.supplier = null;
-    request.orderRef = null;
-    await request.save();
+    await OrderRequestController.removeOrderFromRequest(request, order);
     const finalOrder = await order.save();
     return finalOrder;
 }
@@ -224,9 +124,8 @@ router.put('/:id/supplier', async (req, res) => {
         if (!order) return res.status(404).send("No order found");
         // Update the supplier of all Order Requests in this order
         const promises = order.items.map(async item => {
-            const locatedItem = OrderRequest.findById(item._id);
-            locatedItem.supplier = req.body.supplier;
-            await locatedItem.save();
+            const locatedItem = await OrderRequest.findById(item._id);
+            await OrderRequestController.setSupplier(locatedItem, req.body.supplier);
         });
         await Promise.all(promises);
         order.supplier = req.body.supplier;
@@ -285,14 +184,7 @@ router.post('/:id/order-request', async (req, res) => {
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
         // update OrderRequest to match order
-        orderRequest.orderRef = order._id;
-        orderRequest.status = order.status;
-        if (order.status == "Completed") {
-            // We need to fulfill order requests
-            await fulfillOrderRequests(orderRequest._id, orderRequest.transactions);
-        }
-        orderRequest.supplier = order.supplier;
-        const savedReq = await orderRequest.save();
+        const savedReq = await OrderRequestController.addOrderToOrderRequest(orderRequest, order);
         // Add item price to total price of order.
         order.total_price += savedReq.itemRef.wholesale_cost * savedReq.quantity;
         // add item as first in order
@@ -412,12 +304,6 @@ router.put('/:id/status', async (req, res) => {
             order.date_completed = null; // clear this out to prevent undefined state
         }
         if (req.body.status === "Completed" && order.status !== "Completed") {
-            // update item stocks
-            let promises = order.items.map(item => updateItemStock(item.itemRef._id, item.quantity));
-            await Promise.all(promises);    // await for all promises to resolve
-            promises = order.items.map(item => fulfillOrderRequests(item._id, item.transactions));
-            await Promise.all(promises);    // wait for all transactions to get items added
-            // Find the order again here. The additional query forces the new item stocks to populate.
             order = await Order.findById(order._id);
             // set date_completed
             order.date_completed = new Date();
@@ -426,28 +312,32 @@ router.put('/:id/status', async (req, res) => {
                 order.date_submitted = new Date();
             }
         } else if (req.body.status !== "Completed" && order.status === "Completed") {
-            // decrease item stocks
-            let promises = order.items.map(item => updateItemStock(item.itemRef._id, -1 * item.quantity));
-            await Promise.all(promises);    // await for all promises to resolve
-            promises = order.items.map(item => unfulfillOrderRequests(item._id, item.transactions));
-            await Promise.all(promises);    // wait for all transactions to get items removed
-            // Find the order again here. The additional query forces the new item stocks to populate.
-            order = await Order.findById(order._id);
+            order.date_completed = null;
         }
         // Update the status of all Order Items in this order
         const promises = order.items.map(async item => {
-            const locatedItem = await OrderRequest.findById(item._id);
-            locatedItem.status = req.body.status;
+            let locatedItem = await OrderRequest.findById(item._id);
+            locatedItem = await OrderRequestController.setRequestStatus(locatedItem, req.body.status);
             await locatedItem.save();
         });
         await Promise.all(promises);
         order.status = req.body.status;
         const savedOrder = await order.save();
-        const updatedOrder = await Order.findById(savedOrder._id);
-        return res.status(200).send(updatedOrder);
+        return res.status(200).send(savedOrder);
     } catch (err) {
         res.status(500).send(err);
     }
 });
 
-module.exports = router;
+/**
+ * 
+ * @param {Order} order Order to set price for
+ * @param {Number} price Price to set on order
+ */
+async function setOrderPrice(order, price) {
+    order.total_price = price;
+    const savedOrder = await order.save();
+    return savedOrder;
+}
+
+module.exports = {router: router, setOrderPrice: setOrderPrice};
