@@ -21,10 +21,40 @@ const User = require('../models/User');
 const Transaction = require('./../models/Transaction');
 const ItemController = require('./ItemController');
 const TransactionController = require('./TransactionController');
-const OrderController = require('./OrderController');
 
 router.use(bodyParser.json());
 
+/**
+ * Removes an order request from a provided order, and removes the order from that order request
+ * @param {Order} order order to remove request from
+ * @param {OrderRequest} request request to remove
+ * @returns updated order
+ */
+async function removeOrderRequestFromOrder(order, request) {
+    // remove the requested request from the array
+    order.items = order.items.filter(candidate => {
+        if (candidate._id.toString() === request._id.toString()) {
+            // Adjust price of order.
+            order.total_price -= candidate.itemRef.wholesale_cost * candidate.quantity;
+            return false; // item will be removed
+        }
+        return true;
+    });
+    await removeOrderFromRequest(request, order);
+    const finalOrder = await order.save();
+    return finalOrder;
+}
+
+/**
+ * 
+ * @param {Order} order Order to set price for
+ * @param {Number} price Price to set on order
+ */
+async function setOrderPrice(order, price) {
+    order.total_price = price;
+    const savedOrder = await order.save();
+    return savedOrder;
+}
 
 /**
  * Helper function to add logs to OrderRequests. MODIFIES input OrderRequest
@@ -136,14 +166,6 @@ router.post('/', async (req, res) => {
             item = await Item.findById(req.body.item_id);
             if (!item) return res.status(404).send("Item ID specified, but no item found");
         }
-        let transactions = [];
-        if (req.body.transactions) {
-            for (let transaction of req.body.transactions) {
-                let located_transaction = await Transaction.findById(transaction);
-                if (!located_transaction) return res.status(404).send("Transaction ID " + transaction + " given, but no transaction found");
-                transactions.push(located_transaction._id);
-            }
-        }
         const partNumber = req.body.partNumber;
         const quantity = req.body.quantity;
         const request = req.body.request;
@@ -151,15 +173,19 @@ router.post('/', async (req, res) => {
             item: item,
             request: request,
             partNumber: partNumber,
-            transactions: transactions,
             quantity: quantity,
         });
-        const loggedOrderReq = await addLogToOrderRequest(newOrderReq, req, "Created part request");
+        let transactions = [];
         // Add the order request to transactions
-        for (let transaction of loggedOrderReq.transactions) {
-            let transactionRef = await Transaction.findById(transaction);
-            await TransactionController.addOrderRequestToTransaction(transactionRef, loggedOrderReq);
+        if (req.body.transactions) {
+            for (let transaction of req.body.transactions) {
+                let located_transaction = await Transaction.findById(transaction);
+                if (!located_transaction) return res.status(404).send("Transaction ID " + transaction + " given, but no transaction found");
+                await TransactionController.addOrderRequestToTransaction(located_transaction, newOrderReq);
+            }
         }
+        newOrderReq.transactions = transactions;
+        const loggedOrderReq = await addLogToOrderRequest(newOrderReq, req, "Created part request");
         const savedOrderReq = await loggedOrderReq.save();
         return res.status(200).send(savedOrderReq);
     } catch (err) {
@@ -246,6 +272,7 @@ router.put("/:id/quantity", async (req, res) => {
     try {
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).send("No matching order request found");
+        if (orderRequest.status == 'Completed') return res.status(400).send("Cannot change quantity of completed order request");
         if (!req.body.quantity) return res.status(400).send("No new quantity specified");
         if (orderRequest.transactions && req.body.quantity < orderRequest.transactions.length) {
             return res.status(400).send("Cannot set quantity below number of attached transactions");
@@ -254,7 +281,7 @@ router.put("/:id/quantity", async (req, res) => {
             // Update price of the order
             let order = await Order.findById(orderRequest.orderRef);
             let newPrice = order.total_price + orderRequest.itemRef.wholesale_cost * (req.body.quantity - orderRequest.quantity);
-            await OrderController.setOrderPrice(order, newPrice);
+            await setOrderPrice(order, newPrice);
         }
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
             `Changed quantity from ${orderRequest.quantity} to ${req.body.quantity}`);
@@ -284,22 +311,20 @@ router.post('/:id/transaction', async (req, res) => {
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).json({ "err": "no matching order request found" });
         if (!req.body.transaction_id) return res.status(400).json({ "err": "no transaction id provided" });
-        const transaction = await Transaction.findById(req.body.transaction_id);
+        let transaction = await Transaction.findById(req.body.transaction_id);
         if (!transaction) return res.status(404).json({ "err": "no matching transaction found" });
         // Do not allow users to add order requests to completed transactions.
         if (transaction.complete) return res.status(400).json({ "err": "cannot add order request to completed transaction" });
         if (orderRequest.status == 'Complete') return res.status(400).json({ "err": "cannot add completed order request to transaction" });
         // Now, add the transaction to the order request and vice versa
-        if (!transaction.orderRequests) transaction.orderRequests = [];
-        transaction.orderRequests.push(orderRequest);
-        await transaction.save();
+        transaction = await TransactionController.addOrderRequestToTransaction(transaction, orderRequest);
         orderRequest.transactions.push(transaction._id);
         // Add to order request quantity, and update order price if required.
         orderRequest.quantity += 1;
         if (orderRequest.orderRef && orderRequest.itemRef) {
             const order = await Order.findById(orderRequest.orderRef);
-            order.total_price += orderRequest.itemRef.wholesale_cost;
-            await order.save();
+            let total_price = order.total_price + orderRequest.itemRef.wholesale_cost;
+            await setOrderPrice(order, total_price);
         }
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, `Added transaction ${transaction._id}`);
         const savedOrderReq = await loggedOrderReq.save();
@@ -319,10 +344,10 @@ async function deleteOrderRequest(orderRequest) {
         // Get reference to order this request is in, and update cost.
         let order = await Order.findById(orderRequest.orderRef);
         let item = await Item.findById(orderRequest.itemRef);
-        order.total_price -= item.wholesale_cost * orderRequest.quantity;
+        let total_price = order.total_price - item.wholesale_cost * orderRequest.quantity;
+        order = await setOrderPrice(order, total_price);
         // Remove orderRequest from order.
-        order.items = order.items.splice(order.items.indexOf(orderRequest._id), 1);
-        await order.save();
+        await removeOrderRequestFromOrder(order, orderRequest);
     }
     /**
      * Special case here: up until this point in the lifecycle of an order request, we try to keep the
@@ -336,9 +361,7 @@ async function deleteOrderRequest(orderRequest) {
         // Remove orderRequest from transactions
         for (let transaction of orderRequest.transactions) {
             let transactionRef = await Transaction.findById(transaction);
-            let index = transactionRef.orderRequests.indexOf(orderRequest._id);
-            transactionRef.orderRequests.splice(index, 1);
-            await transactionRef.save();
+            await TransactionController.removeOrderRequestFromTransaction(transactionRef, orderRequest);
         }
     }
     await orderRequest.remove();
@@ -375,14 +398,10 @@ router.delete('/:id/transaction/:transactionID', async (req, res) => {
         orderRequest.quantity -= 1;
         if (orderRequest.orderRef && orderRequest.itemRef) {
             const order = await Order.findById(orderRequest.orderRef);
-            order.total_price -= orderRequest.itemRef.wholesale_cost;
-            await order.save();
+            const total_price = order.total_price - orderRequest.itemRef.wholesale_cost;
+            await setOrderPrice(order, total_price);
         }
-        index = transaction.orderRequests.findIndex(x => x._id.toString() == orderRequest._id.toString());
-        if (index == -1) return res.status(404).json({ "err": "order request was not found attached to transaction" });
-        // Note that we do allow users to remove order requests from completed transactions (just not add new ones).
-        transaction.orderRequests.splice(index, 1);
-        await transaction.save();
+        await TransactionController.removeOrderRequestFromTransaction(transaction, orderRequest);
         if (orderRequest.quantity == 0) {
             // All transactions have been removed from the order request, and we can assume that the request is not useful now. Delete it.
             await deleteOrderRequest(orderRequest);
@@ -414,7 +433,7 @@ async function fulfillTransactionsOrderRequest(requestRef, transactions) {
         throw { err: "Could not locate item to add to transaction" };
     }
     for (let transaction_id of transactions) {
-        const transactionRef = await Transaction.findById(transaction_id);
+        let transactionRef = await Transaction.findById(transaction_id);
         if (!transactionRef) {
             throw { err: "Could not find transaction to add item to" };
         }
@@ -446,7 +465,7 @@ async function unfulfillTransactionsOrderRequest(requestRef, transactions) {
         throw { err: "Could not locate item to remove from transaction" };
     }
     for (let transaction_id of transactions) {
-        const transactionRef = await Transaction.findById(transaction_id);
+        let transactionRef = await Transaction.findById(transaction_id);
         if (!transactionRef) {
             throw { err: "Could not find transaction to add item to" };
         }
@@ -553,6 +572,7 @@ router.put('/:id/item', async (req, res) => {
     try {
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).send("No matching order request found");
+        if (orderRequest.status == 'Completed') return res.status(400).send("Cannot change item on completed order request");
         if (!req.body.item_id) return res.status(400).send("No item ID provided to add to order request");
         const locatedItem = await Item.findById(req.body.item_id);
         if (!locatedItem) return res.status(404).send("No item located matching the ID specified");
@@ -573,10 +593,16 @@ router.put('/:id/item', async (req, res) => {
     }
 });
 
+
+
+
 module.exports = {
     router: router,
     addOrderToOrderRequest: addOrderToOrderRequest,
     removeOrderFromRequest: removeOrderFromRequest,
     setRequestStatus: setRequestStatus,
-    setSupplier: setSupplier
+    setSupplier: setSupplier,
+    // These functions are housed here to avoid circular dependency
+    setOrderPrice: setOrderPrice,
+    removeOrderRequestFromOrder: removeOrderRequestFromOrder
 };

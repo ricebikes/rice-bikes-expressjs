@@ -15,6 +15,7 @@ const Repair = require("./../models/Repair");
 const User = require("./../models/User");
 const _ = require("underscore");
 const config = require("../config")();
+const ItemController = require("./ItemController");
 
 router.use(bodyParser.json());
 router.use(authMiddleware);
@@ -208,33 +209,6 @@ async function calculateTax(transaction) {
   }
 }
 
-/**
- * Adds an item to the active order requests by creating a new order request for it, or if an active
- * order request exists increments the quantity.
- * @param {Item} item Item schema to add order request for (or update an existing one)
- */
-async function createOrUpdateOrderRequest(item) {
-  // First, check if there is an existing order request
-  let order_request = await OrderRequest.findOne({ itemRef: item._id, status: { $in: ['Not Ordered', 'In Cart'] } });
-  if (!order_request) {
-    // Assume that no active order request exists, create one.
-    order_request = await OrderRequest.create({
-      itemRef: item,
-      request: item.name,
-      quantity: item.desired_stock - item.stock,
-      transactions: [],
-      partNumber: '',
-      notes: 'Automatically Created',
-      actions: []
-    });
-  } else {
-    // Update the request's desired quantity.
-    order_request.quantity = item.desired_stock - item.stock;
-    order_request.notes = "Automatically Updated"
-    await order_request.save();
-  }
-}
-
 /*
  Searches for transactions by customer XOR bike XOR transaction description - "GET /transactions/search?customer="
 */
@@ -347,19 +321,9 @@ router.put("/:id/complete", async (req, res) => {
       const found_item = await Item.findById(item.item._id);
       if (found_item.managed) continue; // Don't update stock on managed item
       if (req.body.complete) {
-        found_item.stock -= 1;
+        await ItemController.decreaseItemStock(found_item._id, 1);
       } else {
-        found_item.stock += 1;
-      }
-      await found_item.save();
-      // Check if item stock is less than the desired stock
-      if (found_item.stock < found_item.desired_stock) {
-        /**
-         * Note we don't delete this order request if the transaction is reopened.
-         * It's better to order extra than delete an order request that was important
-         */
-        // add order request for item (or update entry)
-        await createOrUpdateOrderRequest(found_item);
+        await ItemController.increaseItemStock(found_item._id, 1);
       }
       // send low stock email if needed
       /*
@@ -597,7 +561,7 @@ async function addItemToTransaction(transaction, item) {
   // we save the transaction here to make sure the first item we added is saved to the database
   await transaction.save(); // save transaction before working on tax
   const taxedTransaction = await calculateTax(transaction);
-  return taxedTransaction;
+  return taxedTransaction.save();
 }
 
 /**
@@ -636,10 +600,11 @@ async function removeItemFromTransaction(transaction, item) {
   let index = transaction.items.findIndex(x => x.item._id.toString() == item._id.toString())
   if (index == -1) throw { "err": "could not find requested item in transaction's items array to delete" };
   if (transaction.items[index].item.managed) throw { "err": "cannot remove 'managed' item" };
+  transaction.total_cost -= transaction.items[index].price;
   transaction.items.splice(index, 1);
   transaction = await transaction.save();
   let taxedTransaction = await calculateTax(transaction);
-  return taxedTransaction;
+  return taxedTransaction.save();
 }
 
 /**
@@ -788,6 +753,7 @@ async function removeOrderRequestFromTransaction(transaction, orderRequest) {
  */
 async function addOrderRequestToTransaction(transaction, orderRequest) {
   if (transaction.complete) throw {"err": "Cannot add order requests to complete transactions", status:400};
+  if (!transaction.orderRequests) transaction.orderRequests = [];
   transaction.orderRequests.push(orderRequest);
   let updatedTransaction = await transaction.save();
   return updatedTransaction;

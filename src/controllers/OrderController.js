@@ -10,13 +10,10 @@ let express = require('express');
 let router = express.Router();
 let authMiddleware = require('../middleware/AuthMiddleware');
 let Order = require('./../models/Order');
-let OrderRequestController = require('./OrderRequestController');
-let ItemController = require('./ItemController');
 let bodyParser = require('body-parser');
 let adminMiddleware = require('../middleware/AdminMiddleware');
-let Item = require('./../models/Item');
 let OrderRequest = require('../models/OrderRequest');
-const config = require('../config')();
+let OrderRequestController = require('./OrderRequestController');
 
 router.use(bodyParser.json());
 router.use(authMiddleware);
@@ -87,28 +84,6 @@ router.post('/', async (req, res) => {
         res.status(500).send(err);
     }
 });
-
-
-/**
- * Removes an order request from a provided order, and removes the order from that order request
- * @param {Order} order order to remove request from
- * @param {OrderRequest} request request to remove
- * @returns updated order
- */
-async function removeOrderRequestFromOrder(order, request) {
-    // remove the requested request from the array
-    order.items = order.items.filter(candidate => {
-        if (candidate._id.toString() === request._id.toString()) {
-            // Adjust price of order.
-            order.total_price -= candidate.itemRef.wholesale_cost * candidate.quantity;
-            return false; // item will be removed
-        }
-        return true;
-    });
-    await OrderRequestController.removeOrderFromRequest(request, order);
-    const finalOrder = await order.save();
-    return finalOrder;
-}
 
 /**
  * PUT /:id/supplier: updates supplier
@@ -183,6 +158,7 @@ router.post('/:id/order-request', async (req, res) => {
         }
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
+        if (order.status == 'Completed') return res.status(400).send("Cannot add order request to completed order");
         // update OrderRequest to match order
         const savedReq = await OrderRequestController.addOrderToOrderRequest(orderRequest, order);
         // Add item price to total price of order.
@@ -205,9 +181,10 @@ router.delete('/:id/order-request/:reqId', async (req, res) => {
     try {
         let order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send("No order found");
+        if (order.status == 'Completed') return res.status(400).send("Cannot remove order request from completed order");
         const orderRequest = await OrderRequest.findById(req.params.reqId);
         if (!orderRequest) return res.status(404).send("Order request not found in this order");
-        const finalOrder = await removeOrderRequestFromOrder(order, orderRequest);
+        const finalOrder = await OrderRequestController.removeOrderRequestFromOrder(order, orderRequest);
         return res.status(200).send(finalOrder);
     } catch (err) {
         res.status(500).send(err);
@@ -244,7 +221,7 @@ router.delete('/:id', async (req, res) => {
         // Remove the order id from all order requests in order.
         for (let orderReqId of order.items) {
             let orderReq = await OrderRequest.findById(orderReqId);
-            await removeOrderRequestFromOrder(order, orderReq);
+            await OrderRequestController.removeOrderRequestFromOrder(order, orderReq);
         }
         await order.remove();
         return res.status(200).send("OK")
@@ -323,21 +300,14 @@ router.put('/:id/status', async (req, res) => {
         await Promise.all(promises);
         order.status = req.body.status;
         const savedOrder = await order.save();
-        return res.status(200).send(savedOrder);
+        // Forces the order request items array to update.
+        const finalOrder = await Order.findById(savedOrder._id);
+        return res.status(200).send(finalOrder);
     } catch (err) {
         res.status(500).send(err);
     }
 });
 
-/**
- * 
- * @param {Order} order Order to set price for
- * @param {Number} price Price to set on order
- */
-async function setOrderPrice(order, price) {
-    order.total_price = price;
-    const savedOrder = await order.save();
-    return savedOrder;
-}
-
-module.exports = {router: router, setOrderPrice: setOrderPrice};
+module.exports = {
+    router: router,
+};

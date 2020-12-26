@@ -4,6 +4,7 @@ var bodyParser = require('body-parser');
 var Item = require('../models/Item');
 var adminMiddleware = require('../middleware/AdminMiddleware');
 var authMiddleware = require('../middleware/AuthMiddleware');
+const OrderRequest = require('./../models/OrderRequest');
 
 router.use(bodyParser.json());
 
@@ -165,6 +166,35 @@ router.get('/', function (req, res) {
 });
 
 /**
+ * Adds an item to the active order requests by creating a new order request for it, or if an active
+ * order request exists increments the quantity.
+ * @param {Item} item Item schema to add order request for (or update an existing one)
+ */
+async function createOrUpdateOrderRequest(item) {
+    // First, check if there is an existing incomplete order request
+    let order_request = await OrderRequest.findOne({ itemRef: item._id, status: { $in: ['Not Ordered', 'In Cart'] } });
+    if (!order_request) {
+        // Assume that no active order request exists, create one.
+        order_request = await OrderRequest.create({
+            itemRef: item,
+            request: item.name,
+            quantity: item.desired_stock - item.stock,
+            transactions: [],
+            partNumber: '',
+            notes: 'Automatically Created',
+            actions: []
+        });
+    } else {
+        // Update the request's desired quantity.
+        if (order_request.quantity < item.desired_stock - item.stock) {
+            order_request.quantity = item.desired_stock - item.stock;
+        }
+        order_request.notes = "Automatically Updated"
+        await order_request.save();
+    }
+}
+
+/**
  * Raises the stock of an Item asynchronously
  * @param itemID: ID of Item to update stock of
  * @param quantity: amount to raise stock of item
@@ -178,6 +208,13 @@ async function increaseItemStock(itemID, quantity) {
         throw { err: "Stock update requested for invalid item" };
     }
     itemRef.stock += quantity;
+    /**
+     * Check to see if we need to automatically create a new order request for this item.
+     * This is done if the item's stock falls below the desired stock level.
+     */
+    if (itemRef.stock < itemRef.desired_stock) {
+        await createOrUpdateOrderRequest(itemRef);
+    }
     const restockedItem = await itemRef.save();
     if (!restockedItem) {
         throw { err: "Failed to save new stock state of item" };
@@ -196,4 +233,8 @@ async function decreaseItemStock(itemID, quantity) {
     return restockedItem;
 }
 
-module.exports = { router: router, increaseItemStock: increaseItemStock, decreaseItemStock: decreaseItemStock };
+module.exports = {
+    router: router,
+    increaseItemStock: increaseItemStock,
+    decreaseItemStock: decreaseItemStock,
+};
