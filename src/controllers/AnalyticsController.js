@@ -71,7 +71,7 @@ router.get('/transactions/daterange', async (req, res) => {
             // this sends the object to the user
             .pipe(res)
     } catch (err) {
-        return res.status(500).send(err);
+        return res.status(500).json(err);
     }
 });
 
@@ -132,7 +132,7 @@ router.get('/employees/groupmetrics', async (req, res) => {
         // end the CSV string processor and pipe it as a response
         csvStringify.end().pipe(res);
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500).json(err);
     }
 });
 

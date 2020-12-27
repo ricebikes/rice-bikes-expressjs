@@ -13,7 +13,7 @@ router.use(authmiddleware);
 router.get('/search', function (req, res) {
   Repair.find({$text: {$search: req.query.q}}, function (err, repairs) {
     if (err) return res.status(500);
-    res.status(200).send(repairs);
+    res.status(200).json(repairs);
   });
 });
 
@@ -24,7 +24,7 @@ router.use(adminMiddleware);
 router.get('/',function (req, res) {
     Repair.find({}, function (err,repairs) {
         if(err) return res.status(500);
-        res.status(200).send(repairs);
+        res.status(200).json(repairs);
 
     })
 });
@@ -38,7 +38,7 @@ router.post('/',function (request, response) {
     }, function (err,repair) {
         if(err) return response.status(500);
         // respond with the created repair
-        response.status(200).send(repair);
+        response.status(200).json(repair);
     })
 }
 );
@@ -46,19 +46,19 @@ router.post('/',function (request, response) {
 // allow updating repairs with put
 router.put('/:id',function (req,res) {
    Repair.findByIdAndUpdate(req.params.id,req.body,{new:true},function (err, repair) {
-       if (err) return res.status(500).send();
-       if (!repair) return res.status(404).send();
-       return res.status(200).send(repair);
+       if (err) return res.status(500).json();
+       if (!repair) return res.status(404).json();
+       return res.status(200).json(repair);
    });
 });
 
 // allow repair deletion
 router.delete('/:id', function (req, res) {
     Repair.findById(req.params.id, function (err, repair) {
-        if (err) res.status(500).send();
-        if (!repair) res.status(404).send();
+        if (err) res.status(500).json();
+        if (!repair) res.status(404).json();
         repair.remove(function (err) {
-            if (err) res.status(500).send("There was a problem deleting the repair")
+            if (err) res.status(500).json({err: "There was a problem deleting the repair"})
         });
         res.status(200).end();
     });

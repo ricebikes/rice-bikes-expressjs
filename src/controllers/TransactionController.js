@@ -31,7 +31,7 @@ router.post("/", async (req, res) => {
       if (req.body.customer._id) {
         // Find the customer we are told exists.
         customer = await Customer.findById(req.body.customer._id);
-        if (!customer) return res.status(404).send("Customer not found");
+        if (!customer) return res.status(404).json({ err: "Customer not found", status: 404 });
       } else {
         // Create a new customer.
         customer = await Customer.create({
@@ -62,12 +62,12 @@ router.post("/", async (req, res) => {
         "Created Transaction"
       );
       const savedTransaction = await loggedTransaction.save();
-      res.status(200).send(savedTransaction);
+      res.status(200).json(savedTransaction);
     } else {
-      res.status(400).send("No customer specified");
+      res.status(400).json({ err: "No customer specified", status: 400 });
     }
   } catch (err) {
-    return res.status(500).send(err);
+    return res.status(500).json(err);
   }
 });
 
@@ -85,10 +85,28 @@ router.get("/", async (req, res) => {
       delete query.waiting_part;
       query['orderRequests.0'] = { '$exists': true }
     }
-    const transactions = await Transaction.find(query);
-    res.status(200).send(transactions);
+    /**
+     * Note: we deliberately tell mongoose not to return all fields when running this query.
+     * We don't want to send a large amount of data to the frontend when getting a lot of transactions.
+     */
+    let transactions = await Transaction.find(query)
+      .select({
+        items: 0, actions: 0, repairs: 0, description: 0,
+        employee: 0, complete: 0, is_paid: 0, refurb: 0, paymentType: 0
+      });
+    // Sort transactions here
+    transactions = transactions.sort((a, b) => {
+      if ((a.urgent && b.urgent) || (!a.urgent && !b.urgent)) {
+        return new Date(b.date_created).getTime() - new Date(a.date_created).getTime();
+      } else if (b.urgent) {
+        return 1;
+      } else if (a.urgent) {
+        return -1;
+      }
+    });
+    res.status(200).json(transactions);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -130,8 +148,8 @@ router.get("/searchByDate/:dates", function (req, res) {
     date_completed: queryParams,
   }).exec(function (err, transactions) {
     if (err) return res.status(500);
-    if (!transactions) return res.status(404).send("No transactions found.");
-    res.status(200).send(transaction);
+    if (!transactions) return res.status(404).json({ err: "No transactions found.", status: 404 });
+    res.status(200).json(transaction);
   });
 });
 
@@ -144,7 +162,7 @@ router.get("/searchByDate/:dates", function (req, res) {
  */
 async function addLogToTransaction(transaction, req, description) {
   const user_id = req.headers["user-id"];
-  if (!user_id) throw { error: "did not find a user-id header" };
+  if (!user_id) throw { error: "did not find a user-id header", status: 400 };
   try {
     const user = await User.findById(user_id);
     const action = {
@@ -236,7 +254,7 @@ router.get("/search", function (req, res) {
         return search(el.description, req.query.description);
       }
     });
-    res.status(200).send(transactions);
+    res.status(200).json(transactions);
   });
 });
 
@@ -247,9 +265,9 @@ router.get("/search", function (req, res) {
 router.get("/search/ids", async (req, res) => {
   try {
     const distinct = await Transaction.distinct("_id");
-    return res.status(200).send(distinct);
+    return res.status(200).json(distinct);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -260,11 +278,11 @@ router.get("/:id", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction) {
-      return res.status(404).send("No transaction found");
+      return res.status(404).json({ err: "No transaction found", status: 404 });
     }
-    res.status(200).send(transaction);
+    res.status(200).json(transaction);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -279,23 +297,23 @@ Functions to update transactions. Split up to allow tracking user actions.
 router.put("/:id/description", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).send("No transaction found");
+    if (!transaction) return res.status(404).json({ err: "No transaction found", status: 404 });
     if (!req.headers["user-id"])
-      return res.status(400).send("No user id provided");
+      return res.status(400).json({ err: "No user id provided", status: 400 });
     const user_id = req.headers["user-id"];
     const user = await User.findById(user_id);
-    if (!user) return res.status(404).send("No user found");
+    if (!user) return res.status(404).json({ err: "No user found", status: 404 });
     transaction.description =
       req.body.description + "- " + user.firstname + " " + user.lastname;
     const loggedTransaction = await addLogToTransaction(
       transaction,
-      "Updated Transaction Description",
-      req
+      req,
+      "Updated Transaction Description"
     );
     const savedTransaction = await loggedTransaction.save();
-    return res.status(200).send(savedTransaction);
+    return res.status(200).json(savedTransaction);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -307,14 +325,14 @@ router.put("/:id/description", async (req, res) => {
 router.put("/:id/complete", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).send();
+    if (!transaction) return res.status(404).json();
     transaction.complete = req.body.complete;
     transaction.urgent = false;
     if (req.body.complete) {
       transaction.date_completed = Date.now();
     }
     if (transaction.orderRequests.length > 0) {
-      return res.status(403).send("Cannot complete transaction with waiting order requests");
+      return res.status(403).json({ err: "Cannot complete transaction with waiting order requests", status: 403 });
     }
     // Update item inventory
     for (let item of transaction.items) {
@@ -354,9 +372,14 @@ router.put("/:id/complete", async (req, res) => {
       description
     );
     const savedTransaction = await loggedTransaction.save();
-    return res.status(200).send(savedTransaction);
+    return res.status(200).json(savedTransaction);
   } catch (err) {
-    return res.status(500).send(err);
+    if (err.err) {
+      let status = 500;
+      if (err.status) status = err.status;
+      return res.status(status).json({ err: err.err, status: status });
+    }
+    return res.status(500).json(err);
   }
 });
 
@@ -395,9 +418,9 @@ router.put("/:id/mark_paid", async (req, res) => {
       description
     );
     const savedTransaction = await loggedTransaction.save();
-    res.status(200).send(savedTransaction);
+    res.status(200).json(savedTransaction);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -410,12 +433,12 @@ router.put("/:id/mark_paid", async (req, res) => {
 router.put("/:id/update_repair", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).send();
+    if (!transaction) return res.status(404).json();
     // update the transaction's repair
     if (transaction.repairs.length === 0)
       return res
         .status(404)
-        .send("No repairs associated with this transaction");
+        .json({ err: "No repairs associated with this transaction", status: 404 });
     transaction.repairs.forEach(async function (current_repair, idx) {
       // iterate to find the repair that is completed
       if (current_repair._id.toString() === req.body._id) {
@@ -429,11 +452,11 @@ router.put("/:id/update_repair", async (req, res) => {
           description
         );
         const savedTransaction = await loggedTransaction.save();
-        return res.status(200).send(savedTransaction);
+        return res.status(200).json(savedTransaction);
       }
     });
   } catch (err) {
-    return res.status(500).send(err);
+    return res.status(500).json(err);
   }
 });
 
@@ -445,7 +468,7 @@ router.put("/:id/update_repair", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     let transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).send();
+    if (!transaction) return res.status(404).json();
     // Only update the fields that this function is meant to handle
     // This function is being phased out in favor of individual endpoints for each element of transaction
     transaction.waiting_email = req.body.waiting_email;
@@ -453,9 +476,9 @@ router.put("/:id", async (req, res) => {
     transaction.refurb = req.body.refurb;
     transaction.transaction_type = req.body.transaction_type;
     const savedTransaction = await transaction.save();
-    return res.status(200).send(savedTransaction);
+    return res.status(200).json(savedTransaction);
   } catch (err) {
-    return res.status(500).send(err);
+    return res.status(500).json(err);
   }
 });
 
@@ -465,7 +488,7 @@ Deletes a single transaction - "DELETE /transactions/:id"
 router.delete("/:id", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).send("No transaction found.");
+    if (!transaction) return res.status(404).json({ err: "No transaction found.", status: 404 });
     // Update order requests that reference this transaction.
     for (let request of transaction.orderRequests) {
       const requestRef = await OrderRequest.findById(request._id);
@@ -473,9 +496,9 @@ router.delete("/:id", async (req, res) => {
       await requestRef.save();
     }
     await transaction.remove();
-    res.status(200).send("OK");
+    res.status(200).json({ result: "OK", status: 200 });
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -489,7 +512,7 @@ router.post("/:id/bikes", async (req, res) => {
     let bike;
     if (req.body._id) {
       bike = await Bike.findById(req.body.id);
-      if (!bike) return res.status(404).send("No bike found");
+      if (!bike) return res.status(404).json({ err: "No bike found", status: 404 });
     } else {
       bike = await Bike.create({
         make: req.body.make,
@@ -499,9 +522,9 @@ router.post("/:id/bikes", async (req, res) => {
     }
     transaction.bikes.push(bike);
     let finalTransaction = await transaction.save();
-    return res.status(200).send(finalTransaction);
+    return res.status(200).json(finalTransaction);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -519,9 +542,9 @@ router.delete("/:id/bikes/:bike_id", async (req, res) => {
       1
     );
     const finalTransaction = await transaction.save();
-    res.status(200).send(finalTransaction);
+    res.status(200).json(finalTransaction);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -573,9 +596,9 @@ async function addItemToTransaction(transaction, item) {
 router.post("/:id/items", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).send("No Transaction found");
+    if (!transaction) return res.status(404).json({ err: "No Transaction found", status: 404 });
     const item = await Item.findById(req.body._id);
-    if (!item) return res.status(404).send("No item found");
+    if (!item) return res.status(404).json({ err: "No item found", status: 404 });
     // Add the item to the transaction
     const taxedTransaction = await addItemToTransaction(transaction, item);
     const loggedTransaction = await addLogToTransaction(
@@ -584,9 +607,14 @@ router.post("/:id/items", async (req, res) => {
       `Added Item ${item.name}`
     );
     const finalTransaction = await loggedTransaction.save();
-    res.status(200).send(finalTransaction);
+    res.status(200).json(finalTransaction);
   } catch (err) {
-    res.status(500).send(err);
+    if (err.err) {
+      let status = 500;
+      if (err.status) status = err.status;
+      return res.status(status).json({ err: err.err, status: status });
+    }
+    res.status(500).json(err);
   }
 });
 
@@ -598,8 +626,8 @@ router.post("/:id/items", async (req, res) => {
 async function removeItemFromTransaction(transaction, item) {
   // Find index of item to remove
   let index = transaction.items.findIndex(x => x.item._id.toString() == item._id.toString())
-  if (index == -1) throw { "err": "could not find requested item in transaction's items array to delete" };
-  if (transaction.items[index].item.managed) throw { "err": "cannot remove 'managed' item" };
+  if (index == -1) throw { "err": "could not find requested item in transaction's items array to delete", status: 404 };
+  if (transaction.items[index].item.managed) throw { "err": "cannot remove 'managed' item", status: 403 };
   transaction.total_cost -= transaction.items[index].price;
   transaction.items.splice(index, 1);
   transaction = await transaction.save();
@@ -616,7 +644,7 @@ router.delete("/:id/items/:item_id", async (req, res) => {
     let transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404);
     let item = await Item.findById(req.params.item_id);
-    if (!item) return res.status(404).json({"err": "could not find item to remove"})
+    if (!item) return res.status(404).json({ "err": "could not find item to remove" })
     let action_description = `Deleted item ${item.name}`;
     let taxedTransaction = await removeItemFromTransaction(transaction, item);
     let loggedTransaction = await addLogToTransaction(
@@ -625,9 +653,14 @@ router.delete("/:id/items/:item_id", async (req, res) => {
       action_description
     );
     let savedTransaction = await loggedTransaction.save();
-    res.status(200).send(savedTransaction);
+    res.status(200).json(savedTransaction);
   } catch (err) {
-    res.status(500).send(err);
+    if (err.err) {
+      let status = 500;
+      if (err.status) status = err.status;
+      return res.status(status).json({ err: err.err, status: status });
+    }
+    res.status(500).json(err);
   }
 });
 
@@ -639,8 +672,8 @@ router.delete("/:id/items/:item_id", async (req, res) => {
 router.post("/:id/repairs", async (req, res) => {
   try {
     let transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).send("No transaction");
-    if (!req.body._id) return res.status(400).send("No repair to add");
+    if (!transaction) return res.status(404).json({ err: "No transaction", status: 404 });
+    if (!req.body._id) return res.status(400).json({ err: "No repair to add", status: 400 });
     let repair = await Repair.findById(req.body._id);
     if (!repair) return res.status(404);
     let rep = { repair: repair, completed: false };
@@ -653,9 +686,9 @@ router.post("/:id/repairs", async (req, res) => {
       `Added repair ${repair.name}`
     );
     let savedTransaction = await loggedTransaction.save();
-    res.status(200).send(savedTransaction);
+    res.status(200).json(savedTransaction);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -682,9 +715,9 @@ router.delete("/:id/repairs/:repair_id", async (req, res) => {
       description
     );
     let savedTransaction = await loggedTransaction.save();
-    res.status(200).send(savedTransaction);
+    res.status(200).json(savedTransaction);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -704,11 +737,11 @@ router.get("/:id/email-notify", async (req, res) => {
       },
       function (err) {
         if (err) return res.status(500);
-        res.status(200).send("OK");
+        res.status(200).json({ result: "OK", status: 200 });
       }
     );
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -725,11 +758,11 @@ router.get("/:id/email-receipt", async (req, res) => {
       },
       function (err) {
         if (err) return res.status(500);
-        res.status(200).send("OK");
+        res.status(200).json({ result: "OK", status: 200 });
       }
     );
   } catch (err) {
-    res.status(500).send(err);
+    res.status(500).json(err);
   }
 });
 
@@ -740,7 +773,7 @@ router.get("/:id/email-receipt", async (req, res) => {
  */
 async function removeOrderRequestFromTransaction(transaction, orderRequest) {
   let index = transaction.orderRequests.findIndex(x => x._id.toString() == orderRequest._id.toString());
-  if (index == -1 ) throw {"err": "No matching order request found to remove from transaction", status:404};
+  if (index == -1) throw { "err": "No matching order request found to remove from transaction", status: 404 };
   transaction.orderRequests.splice(index, 1);
   let updatedTransaction = await transaction.save();
   return updatedTransaction;
@@ -752,7 +785,7 @@ async function removeOrderRequestFromTransaction(transaction, orderRequest) {
  * @param {OrderRequest} orderRequest Order request to add
  */
 async function addOrderRequestToTransaction(transaction, orderRequest) {
-  if (transaction.complete) throw {"err": "Cannot add order requests to complete transactions", status:400};
+  if (transaction.complete) throw { "err": "Cannot add order requests to complete transactions", status: 400 };
   if (!transaction.orderRequests) transaction.orderRequests = [];
   transaction.orderRequests.push(orderRequest);
   let updatedTransaction = await transaction.save();
@@ -760,8 +793,8 @@ async function addOrderRequestToTransaction(transaction, orderRequest) {
 }
 
 module.exports = {
-  router: router, 
-  addItemToTransaction: addItemToTransaction, 
+  router: router,
+  addItemToTransaction: addItemToTransaction,
   removeItemFromTransaction: removeItemFromTransaction,
   addOrderRequestToTransaction: addOrderRequestToTransaction,
   removeOrderRequestFromTransaction: removeOrderRequestFromTransaction,

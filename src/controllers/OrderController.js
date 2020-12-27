@@ -39,7 +39,9 @@ router.get('/', function (req, res) {
         query,
         function (err, orders) {
             if (err) return res.status(500);
-            return res.status(200).send(orders);
+            // Sort the orders so that the most recent one is first in the array
+            orders = orders.sort((a,b) => b.date_created - a.date_created);
+            return res.status(200).json(orders);
         });
 });
 
@@ -50,10 +52,10 @@ router.get('/', function (req, res) {
 router.get('/:id', async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).send("No order found");
-        res.status(200).send(order);
+        if (!order) return res.status(404).json({ err: "No order found", status: 404 });
+        res.status(200).json(order);
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500).json(err);
     }
 
 });
@@ -71,17 +73,17 @@ router.use(adminMiddleware);
  */
 router.post('/', async (req, res) => {
     if (!req.body.supplier) {
-        return res.status(400).send("No supplier provided");
+        return res.status(400).json({ err: "No supplier provided", status: 400 });
     }
     try {
         const supplier = req.body.supplier;
         // create order using populated item refs
         let newOrder = await Order.create({ supplier: supplier, date_created: new Date(), status: "In Cart" });
-        res.status(200).send(newOrder);
+        res.status(200).json(newOrder);
     } catch (err) {
         // push error back to frontend user
         console.log(err);
-        res.status(500).send(err);
+        res.status(500).json(err);
     }
 });
 
@@ -94,9 +96,9 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id/supplier', async (req, res) => {
     try {
-        if (!req.body.supplier) return res.status(400).send("No supplier specified");
+        if (!req.body.supplier) return res.status(400).json({ err: "No supplier specified", status: 400 });
         let order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).send("No order found");
+        if (!order) return res.status(404).json({ err: "No order found", status: 404 });
         // Update the supplier of all Order Requests in this order
         const promises = order.items.map(async item => {
             const locatedItem = await OrderRequest.findById(item._id);
@@ -105,9 +107,15 @@ router.put('/:id/supplier', async (req, res) => {
         await Promise.all(promises);
         order.supplier = req.body.supplier;
         const savedOrder = await order.save();
-        return res.status(200).send(savedOrder);
+        return res.status(200).json(savedOrder);
     } catch (err) {
-        res.status(500).send(err);
+        if (err.err) {
+            // Error was thrown by one of our functions
+            let status = 500;
+            if (err.status) status = err.status;
+            return res.status(status).json({ err: err.err, status: status });
+        }
+        res.status(500).json(err);
     }
 });
 
@@ -121,17 +129,17 @@ router.put('/:id/supplier', async (req, res) => {
 router.put('/:id/notes', async (req, res) => {
     try {
         if (req.body.notes == undefined) {
-            return res.status(400).send("No notes string provided");
+            return res.status(400).json({ err: "No notes string provided", status: 400 });
         }
         let order = await Order.findById(req.params.id);
         if (!order) {
-            return res.status(404).send("No order with provided ID found");
+            return res.status(404).json({ err: "No order with provided ID found", status: 404 });
         }
         order.notes = req.body.notes;
         const savedOrder = await order.save();
-        return res.status(200).send(savedOrder);
+        return res.status(200).json(savedOrder);
     } catch (err) {
-        return res.status(500).send(err);
+        return res.status(500).json(err);
     }
 })
 
@@ -144,21 +152,21 @@ router.put('/:id/notes', async (req, res) => {
  */
 router.post('/:id/order-request', async (req, res) => {
     try {
-        if (!req.body.order_request_id) return res.status(400).send("No order request specified");
+        if (!req.body.order_request_id) return res.status(400).json({ err: "No order request specified", status: 400 });
         const orderRequest = await OrderRequest.findById(req.body.order_request_id);
-        if (!orderRequest) return res.status(404).send("Order request specified, but none found!");
+        if (!orderRequest) return res.status(404).json({ err: "Order request specified, but none found!", status: 404 });
         if (orderRequest.orderRef) {
-            return res.status(403).send("Cannot associate order request, already associated to another order");
+            return res.status(403).json({ err: "Cannot associate order request, already associated to another order", status: 403 });
         }
         if (!orderRequest.itemRef) {
-            return res.status(403).send("Order request must have an associated item to be added to an order");
+            return res.status(403).json({ err: "Order request must have an associated item to be added to an order", status: 403 });
         }
         if (orderRequest.quantity < 1) {
-            return res.status(400).send("Order request has bad quantity: " + orderRequest.quantity);
+            return res.status(400).json({ err: "Order request has bad quantity: " + orderRequest.quantity, status: 400 });
         }
         let order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).send("No order found");
-        if (order.status == 'Completed') return res.status(400).send("Cannot add order request to completed order");
+        if (!order) return res.status(404).json("No order found");
+        if (order.status == 'Completed') return res.status(400).json({ err: "Cannot add order request to completed order", status: 400 });
         // update OrderRequest to match order
         const savedReq = await OrderRequestController.addOrderToOrderRequest(orderRequest, order);
         // Add item price to total price of order.
@@ -166,9 +174,15 @@ router.post('/:id/order-request', async (req, res) => {
         // add item as first in order
         order.items.unshift(savedReq);
         const savedOrder = await order.save();
-        res.status(200).send(savedOrder);
+        res.status(200).json(savedOrder);
     } catch (err) {
-        res.status(500).send(err);
+        if (err.err) {
+            // Error was thrown by one of our functions
+            let status = 500;
+            if (err.status) status = err.status;
+            return res.status(status).json({ err: err.err, status: status });
+        }
+        res.status(500).json(err);
     }
 });
 
@@ -180,14 +194,19 @@ router.post('/:id/order-request', async (req, res) => {
 router.delete('/:id/order-request/:reqId', async (req, res) => {
     try {
         let order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).send("No order found");
-        if (order.status == 'Completed') return res.status(400).send("Cannot remove order request from completed order");
+        if (!order) return res.status(404).json({ err: "No order found", status: 404 });
         const orderRequest = await OrderRequest.findById(req.params.reqId);
-        if (!orderRequest) return res.status(404).send("Order request not found in this order");
+        if (!orderRequest) return res.status(404).json({ err: "Order request not found in this order", status: 404 });
         const finalOrder = await OrderRequestController.removeOrderRequestFromOrder(order, orderRequest);
-        return res.status(200).send(finalOrder);
+        return res.status(200).json(finalOrder);
     } catch (err) {
-        res.status(500).send(err);
+        if (err.err) {
+            // Error was thrown by one of our functions
+            let status = 500;
+            if (err.status) status = err.status;
+            return res.status(status).json({ err: err.err, status: status });
+        }
+        res.status(500).json(err);
     }
 });
 
@@ -200,14 +219,14 @@ router.delete('/:id/order-request/:reqId', async (req, res) => {
  */
 router.put('/:id/tracking_number', async (req, res) => {
     try {
-        if (!req.body.tracking_number) return res.status(400).send("No tracking number specified");
+        if (!req.body.tracking_number) return res.status(400).json({ err: "No tracking number specified", status: 400 });
         let order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).send("No order found");
+        if (!order) return res.status(404).json({ err: "No order found", status: 404 });
         order.tracking_number = req.body.tracking_number;
         const savedOrder = await order.save();
-        return res.status(200).send(savedOrder);
+        return res.status(200).json(savedOrder);
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500).json(err);
     }
 });
 
@@ -217,16 +236,16 @@ router.put('/:id/tracking_number', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         let order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).send("No order found");
+        if (!order) return res.status(404).json({ err: "No order found", status: 404 });
         // Remove the order id from all order requests in order.
         for (let orderReqId of order.items) {
             let orderReq = await OrderRequest.findById(orderReqId);
             await OrderRequestController.removeOrderRequestFromOrder(order, orderReq);
         }
         await order.remove();
-        return res.status(200).send("OK")
+        return res.status(200).json({ status: "OK" })
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500).json(err);
     }
 });
 
@@ -240,20 +259,20 @@ router.delete('/:id', async (req, res) => {
 router.put('/:id/freight-charge', async (req, res) => {
     try {
         if (req.body.charge == null) {
-            return res.status(400).send("A freight charge must be specified");
+            return res.status(400).json({ err: "A freight charge must be specified", status: 400 });
         }
         const order = await Order.findById(req.params.id);
         if (!order) {
-            return res.status(404).send("No order with given ID found");
+            return res.status(404).json({ err: "No order with given ID found", status: 404 });
         }
         if (!order.freight_charge) order.freight_charge = 0;
         const difference = req.body.charge - order.freight_charge;
         order.freight_charge = req.body.charge;
         order.total_price += difference;
         const savedOrder = await order.save();
-        return res.status(200).send(savedOrder);
+        return res.status(200).json(savedOrder);
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500).json(err);
     }
 })
 
@@ -268,9 +287,16 @@ router.put('/:id/freight-charge', async (req, res) => {
  */
 router.put('/:id/status', async (req, res) => {
     try {
-        if (!req.body.status) return res.status(400).send("No status specified");
+        if (!req.body.status) return res.status(400).json({ err: "No status specified", status: 400 });
         let order = await Order.findById(req.params.id);
-        if (!order) return res.status(404).send("No order found");
+        if (!order) return res.status(404).json({ err: "No order found", status: 404 });
+        // Update the status of all Order Items in this order
+        const promises = order.items.map(async item => {
+            let locatedItem = await OrderRequest.findById(item._id);
+            locatedItem = await OrderRequestController.setRequestStatus(locatedItem, req.body.status);
+            await locatedItem.save();
+        });
+        await Promise.all(promises); // Set all request statuses
         if (req.body.status === "In Cart") {
             // clear out the submission date and completion date
             order.date_completed = null;
@@ -291,20 +317,26 @@ router.put('/:id/status', async (req, res) => {
         } else if (req.body.status !== "Completed" && order.status === "Completed") {
             order.date_completed = null;
         }
-        // Update the status of all Order Items in this order
-        const promises = order.items.map(async item => {
-            let locatedItem = await OrderRequest.findById(item._id);
-            locatedItem = await OrderRequestController.setRequestStatus(locatedItem, req.body.status);
-            await locatedItem.save();
-        });
-        await Promise.all(promises);
         order.status = req.body.status;
         const savedOrder = await order.save();
         // Forces the order request items array to update.
         const finalOrder = await Order.findById(savedOrder._id);
-        return res.status(200).send(finalOrder);
+        return res.status(200).json(finalOrder);
     } catch (err) {
-        res.status(500).send(err);
+        if (err.status == 400 && err.problemTransactions) {
+            /**
+             * This is a specific error, stating that we cannot mark an order as incomplete because some of the
+             * transactions waiting for parts from it have used those parts. Forward these error details to frontend.
+             */
+            return res.status(400).json({ err: "Some transactions attached to order are already complete, cannot reopen order", 
+                                          status: 400, problemTransactions: err.problemTransactions });
+        }
+        if (err.err) {
+            let status = 500;
+            if (err.status) status = err.status;
+            return res.status(status).json({ err: err.err, status: status });
+        }
+        res.status(500).json(err);
     }
 });
 

@@ -31,7 +31,7 @@ Gets all users - "GET /user"
 router.get('/', function (req, res) {
   User.find({}, function (err, users) {
     if (err)
-      return res.status(500).send("There was a problem finding the users.");
+      return res.status(500).json({err: "There was a problem finding the users.", status: 500});
     res.status(200).send(users);
   });
 });
@@ -45,7 +45,7 @@ router.delete('/:user_id', function (req, res) {
       if (err) res.status(500).send();
       if (!user) res.status(404).send();
       user.remove(function (err) {
-        if (err) res.status(500).send("There was a problem deleting the user")
+        if (err) res.status(500).json({err: "There was a problem deleting the user", status: 500})
       });
       res.status(200).end();
     });

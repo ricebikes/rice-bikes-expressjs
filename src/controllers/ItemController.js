@@ -16,8 +16,8 @@ router.use(authMiddleware);
  */
 router.get('/categories', function (req, res) {
     Item.distinct('category', function (err, categories) {
-        if (err) return res.status(500).send(err);
-        res.status(200).send(categories);
+        if (err) return res.status(500).json(err);
+        res.status(200).json(categories);
     })
 });
 /**
@@ -26,8 +26,8 @@ router.get('/categories', function (req, res) {
  */
 router.get('/brands', function (req, res) {
     Item.distinct('brand', function (err, brands) {
-        if (err) return res.status(500).send(err);
-        res.status(200).send(brands);
+        if (err) return res.status(500).json(err);
+        res.status(200).json(brands);
     })
 });
 
@@ -41,9 +41,9 @@ router.get('/sizes', async (req, res) => {
     // Using async notation for cleaner code.
     try {
         const results = await Item.distinct('size', { category: req.query.category });
-        res.status(200).send(results);
+        res.status(200).json(results);
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500).json(err);
     }
 });
 
@@ -72,13 +72,9 @@ router.get('/search', function (req, res) {
     }
     // nifty one liner to delete any null or undefined values so that we don't have to explicitly check earlier
     query_object = Object.entries(query_object).reduce((a, [k, v]) => (v == null ? a : { ...a, [k]: v }), {});
-    if (Object.keys(query_object).length === 0) {
-        // if query object is empty, return an empty array rather than searching
-        return res.status(200).send([]);
-    }
     Item.find(query_object, function (err, items) {
-        if (err) return res.status(500).send(err);
-        res.status(200).send(items);
+        if (err) return res.status(500).json(err);
+        res.status(200).json(items);
     });
 });
 
@@ -110,7 +106,7 @@ router.post('/', function (req, res) {
         && (standard_price != undefined)
         && (wholesale_cost != undefined)
         && (desired_stock != undefined))) {
-        return res.status(400).send("Malformed request, missing fields");
+        return res.status(400).json({ "err": "Malformed request, missing fields", "status": 400 });
     }
     Item.create({
         name: name,
@@ -127,8 +123,8 @@ router.post('/', function (req, res) {
         minimum_stock: minimum_stock,
         stock: 0
     }, function (err, item) {
-        if (err) return res.status(500).send(err);
-        res.status(200).send(item);
+        if (err) return res.status(500).json(err);
+        res.status(200).json(item);
     })
 });
 
@@ -137,20 +133,19 @@ router.post('/', function (req, res) {
  */
 router.put('/:id', function (req, res) {
     const { name, upc, category, size, brand, condition, standard_price, wholesale_cost, desired_stock, minimum_stock } = req.body;
-    // validate the request before proceeding
-    if (!((condition === 'Used' || upc)
-        && name
-        && category
-        && brand
+    // validate the request before proceeding. Be less aggressive than we are when validating new items.
+    if (name
+        && category != undefined
+        && brand != undefined
         && (standard_price != undefined)
         && (wholesale_cost != undefined)
-        && (desired_stock != undefined))) {
-        return res.status(400).send("Malformed request, missing fields");
+        && (desired_stock != undefined)) {
+        return res.status(400).json({ "err": "Malformed request, missing fields", "status": 400 });
     }
     Item.findByIdAndUpdate(req.params.id, req.body, { new: true }, function (err, item) {
-        if (err) return res.status(500).send(err);
+        if (err) return res.status(500).json(err);
         if (!item) return res.status(404).send();
-        return res.status(200).send(item);
+        return res.status(200).json(item);
     });
 });
 
@@ -185,11 +180,15 @@ async function createOrUpdateOrderRequest(item) {
             actions: []
         });
     } else {
+        const regex = /[Aa]utomatically ([Cc]reated|[Uu]pdated)/;
         // Update the request's desired quantity.
         if (order_request.quantity < item.desired_stock - item.stock) {
             order_request.quantity = item.desired_stock - item.stock;
         }
-        order_request.notes = "Automatically Updated"
+        if (!regex.test(order_request.notes)) {
+            // Order request notes do not include the string "Automatically Updated", so add it.
+            order_request.notes += " Automatically Updated";
+        }
         await order_request.save();
     }
 }
@@ -205,7 +204,7 @@ async function increaseItemStock(itemID, quantity) {
     const itemRef = await Item.findById(itemID);
     if (!itemRef) {
         // throw error so the frontend knows something went wrong
-        throw { err: "Stock update requested for invalid item" };
+        throw { err: "Stock update requested for invalid item", status: 400 };
     }
     itemRef.stock += quantity;
     /**
@@ -217,7 +216,7 @@ async function increaseItemStock(itemID, quantity) {
     }
     const restockedItem = await itemRef.save();
     if (!restockedItem) {
-        throw { err: "Failed to save new stock state of item" };
+        throw { err: "Failed to save new stock state of item", status: 500 };
     }
     return restockedItem;
 }
