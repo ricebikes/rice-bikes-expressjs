@@ -15,6 +15,7 @@ const ItemController = require('./controllers/ItemController');
 const CustomerController = require('./controllers/CustomerController');
 const OrderController = require('./controllers/OrderController');
 const OrderRequestController = require('./controllers/OrderRequestController');
+const BikeController = require('./controllers/BikeController');
 
 /* Create app */
 var app = express();
@@ -52,5 +53,6 @@ app.use('/api/repairs', RepairController.router);
 app.use('/api/customers', CustomerController.router);
 app.use('/api/orders',OrderController.router);
 app.use('/api/order-requests', OrderRequestController.router);
+app.use('/api/bikes', BikeController.router);
 
 module.exports = app;
