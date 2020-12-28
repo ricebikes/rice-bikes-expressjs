@@ -16,6 +16,8 @@ const User = require("./../models/User");
 const _ = require("underscore");
 const config = require("../config")();
 const ItemController = require("./ItemController");
+const { set } = require("mongoose");
+const { result } = require("underscore");
 
 router.use(bodyParser.json());
 router.use(authMiddleware);
@@ -227,35 +229,43 @@ async function calculateTax(transaction) {
   }
 }
 
-/*
- Searches for transactions by customer XOR bike XOR transaction description - "GET /transactions/search?customer="
-*/
-router.get("/search", function (req, res) {
-  Transaction.find({}).exec(function (err, transactions) {
-    if (err) return res.status(500);
-    transactions = transactions.filter(function (el) {
-      if (req.query.customer) {
-        return (
-          search(el.customer.first_name, req.query.customer) ||
-          search(el.customer.last_name, req.query.customer) ||
-          search(el.customer.email, req.query.customer)
-        );
-      } else if (req.query.bike) {
-        for (let i = 0; i < el.bikes.length; i++) {
-          if (
-            search(el.bikes[i].make, req.query.bike) ||
-            search(el.bikes[i].model, req.query.bike) ||
-            search(el.bikes[i].description, req.query.bike)
-          ) {
-            return true;
-          }
-        }
-      } else if (req.query.description) {
-        return search(el.description, req.query.description);
-      }
+/**
+ * GET /api/transactions/search- Searches for transactions
+ * Requires a JSON body to search
+ * body: {
+ *   customers: array of customer ObjectIDs. Any transactions with one of the customer IDs will match.
+ *   bikes: array of bike ObjectIDs. Any transactions with one of the bike IDs will match.
+ *   description: string. any transaction with the words in this string in it's description will match
+ * }
+ */
+router.get("/search", async function (req, res) {
+  try {
+    let query = {};
+    // Construct the query object
+    if (req.body.customers) {
+      query["customer"] = { $in: req.body.customers };
+    }
+    if (req.body.bikes) {
+      query["bikes"] = { $in: req.body.bikes };
+    }
+    let results = await Transaction.find(query).select({
+      items: 0, actions: 0, repairs: 0,
+      employee: 0, complete: 0, is_paid: 0, refurb: 0, paymentType: 0
     });
-    res.status(200).json(transactions);
-  });
+    if (req.body.description) {
+      results = results.filter(x => {
+        if (req.body.description) {
+          transactions = transactions.filter(x => {
+            // Use search helper for description string
+            return search(x.description, req.body.description);
+          })
+        }
+      });
+    }
+    return res.status(200).json(results);
+  } catch (err) {
+    return res.status(500).json(err);
+  }
 });
 
 /**
