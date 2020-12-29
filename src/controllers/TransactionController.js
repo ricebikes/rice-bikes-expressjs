@@ -120,7 +120,7 @@ router.get("/", async (req, res) => {
  */
 var search = function (str, query) {
   if (str) {
-    return str.toLowerCase().search(query) !== -1;
+    return str.toLowerCase().search(query.toLowerCase()) !== -1;
   } else {
     return false;
   }
@@ -231,36 +231,30 @@ async function calculateTax(transaction) {
 
 /**
  * GET /api/transactions/search- Searches for transactions
- * Requires a JSON body to search
- * body: {
- *   customers: array of customer ObjectIDs. Any transactions with one of the customer IDs will match.
- *   bikes: array of bike ObjectIDs. Any transactions with one of the bike IDs will match.
- *   description: string. any transaction with the words in this string in it's description will match
- * }
+ * customers: array of customer ObjectIDs. Any transactions with one of the customer IDs will match.
+ * bikes: array of bike ObjectIDs. Any transactions with one of the bike IDs will match.
+ * description: string. any transaction with the words in this string in it's description will match
+ * Arrays should be formatted like so: "val1,val2,val3"
  */
 router.get("/search", async function (req, res) {
   try {
     let query = {};
     // Construct the query object
-    if (req.body.customers) {
-      query["customer"] = { $in: req.body.customers };
+    if (req.query.customers) {
+      query["customer"] = { $in: req.query.customers.split(",") };
     }
-    if (req.body.bikes) {
-      query["bikes"] = { $in: req.body.bikes };
+    if (req.query.bikes) {
+      query["bikes"] = { $in: req.query.bikes.split(",") };
     }
     let results = await Transaction.find(query).select({
       items: 0, actions: 0, repairs: 0,
       employee: 0, complete: 0, is_paid: 0, refurb: 0, paymentType: 0
     });
-    if (req.body.description) {
+    if (req.query.description) {
       results = results.filter(x => {
-        if (req.body.description) {
-          transactions = transactions.filter(x => {
-            // Use search helper for description string
-            return search(x.description, req.body.description);
-          })
-        }
-      });
+        // Use search helper for description string
+        return search(x.description, req.query.description);
+      })
     }
     return res.status(200).json(results);
   } catch (err) {
