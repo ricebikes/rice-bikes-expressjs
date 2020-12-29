@@ -182,6 +182,7 @@ router.post('/', async (req, res) => {
                 let located_transaction = await Transaction.findById(transaction);
                 if (!located_transaction) return res.status(404).json({ err: "Transaction ID " + transaction + " given, but no transaction found", status: 404 });
                 await TransactionController.addOrderRequestToTransaction(located_transaction, newOrderReq);
+                transactions.push(transaction);
             }
         }
         newOrderReq.transactions = transactions;
