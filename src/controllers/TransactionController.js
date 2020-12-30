@@ -556,12 +556,13 @@ router.delete("/:id/bikes/:bike_id", async (req, res) => {
  * 
  * @param {Transaction} transaction Transaction to add item to
  * @param {Item} item Item to add
+ * @param {Number} custom_price: custom price for item
  */
-async function addItemToTransaction(transaction, item) {
+async function addItemToTransaction(transaction, item, custom_price = 0) {
   let newItem;
   // Check to see if a custom price was given
-  if (item.condition == 'Used' && req.body.custom_price != null) {
-    let price = req.body.custom_price;
+  if (item.condition == 'Used' && custom_price != 0) {
+    let price = custom_price;
     if (typeof price != 'number') {
       // Parse price
       price = parseFloat(price);
@@ -604,7 +605,7 @@ router.post("/:id/items", async (req, res) => {
     const item = await Item.findById(req.body._id);
     if (!item) return res.status(404).json({ err: "No item found", status: 404 });
     // Add the item to the transaction
-    const taxedTransaction = await addItemToTransaction(transaction, item);
+    const taxedTransaction = await addItemToTransaction(transaction, item, req.body.custom_price);
     const loggedTransaction = await addLogToTransaction(
       taxedTransaction,
       req,
