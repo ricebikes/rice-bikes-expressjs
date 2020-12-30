@@ -16,8 +16,7 @@ const User = require("./../models/User");
 const _ = require("underscore");
 const config = require("../config")();
 const ItemController = require("./ItemController");
-const { set } = require("mongoose");
-const { result } = require("underscore");
+const mailer = require("./../email");
 
 router.use(bodyParser.json());
 router.use(authMiddleware);
@@ -354,6 +353,7 @@ router.put("/:id/complete", async (req, res) => {
                 User.find({roles:'operations'},function (err, user_array) {
                   for (user of user_array){
                       let email = user.username+'@rice.edu';
+                      // IF you reenable this, convert the mailer line to use the "new mailer.send" call used in other endpoints in this code
                       res.mailer.send('email-lowstock',{
                         to:email,
                         subject: `Low Stock Alert - ${found_item.name}`,
@@ -397,18 +397,17 @@ router.put("/:id/mark_paid", async (req, res) => {
     const transaction = await Transaction.findById(req.params.id);
     if (req.body.is_paid && !transaction.is_paid) {
       // Send receipt email
-      res.mailer.send(
-        "email-receipt",
-        {
+      await mailer.send({
+        message: {
           to: transaction.customer.email,
-          subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
+        },
+        template: "email-receipt",
+        // Objects in "locals" are accessible to the pug file
+        locals: {
           transaction: transaction,
           date: moment().format("MMMM Do YYYY, h:mm:ss a"),
-        },
-        function (err) {
-          if (err) return res.status(500);
         }
-      );
+      });
     }
     transaction.is_paid = req.body.is_paid;
     transaction.complete = true;
@@ -733,18 +732,18 @@ router.get("/:id/email-notify", async (req, res) => {
   try {
     let transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404);
-    res.mailer.send(
-      "email-notify-ready",
-      {
+    await mailer.send({
+      message: {
         to: transaction.customer.email,
-        subject: `Rice Bikes - your bike is ready - ${transaction._id}`,
-        first_name: transaction.customer.first_name,
       },
-      function (err) {
-        if (err) return res.status(500);
-        res.status(200).json({ result: "OK", status: 200 });
+      template: "email-notify-ready",
+      // Objects in locals are exposed to pug file
+      locals: {
+        transaction: transaction,
+        first_name: transaction.customer.first_name,
       }
-    );
+    })
+    res.status(200).json({ "status": "OK" });
   } catch (err) {
     res.status(500).json(err);
   }
@@ -754,18 +753,17 @@ router.get("/:id/email-receipt", async (req, res) => {
   try {
     let transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404);
-    res.mailer.send(
-      "email-receipt",
-      {
+    await mailer.send({
+      message: {
         to: transaction.customer.email,
-        subject: `Rice Bikes - Receipt - transaction #${transaction._id}`,
-        transaction: transaction,
       },
-      function (err) {
-        if (err) return res.status(500);
-        res.status(200).json({ result: "OK", status: 200 });
+      template: "email-receipt",
+      // Objects in "locals" are accessible to the pug file
+      locals: {
+        transaction: transaction,
+        date: moment().format("MMMM Do YYYY, h:mm:ss a"),
       }
-    );
+    });
   } catch (err) {
     res.status(500).json(err);
   }

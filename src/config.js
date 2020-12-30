@@ -12,7 +12,7 @@ let CONFIG = function() {
         user: 't4jves3pwjtt2svq@ethereal.email',
         pass: 'mPsJ9XKegskYgEaqZr',
         host: 'smtp.ethereal.email',
-        port: 587
+        port: 465
       },
       tax: {
         cutoff_date: new Date(1580277600000), // 06:00 GMT on 1/29/2020 (Tax is only applied after this date)
@@ -32,7 +32,7 @@ let CONFIG = function() {
         user: 't4jves3pwjtt2svq@ethereal.email',
         pass: 'mPsJ9XKegskYgEaqZr',
         host: 'smtp.ethereal.email',
-        port: 587
+        port: 465
       },
       tax: {
         cutoff_date: new Date(1580277600000), // 06:00 GMT on 1/29/2020
