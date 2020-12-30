@@ -577,7 +577,7 @@ async function addItemToTransaction(transaction, item, custom_price = 0) {
     // Apply employee pricing for this item.
     newItem = {
       item: item,
-      price: item.wholesale_cost * config.employee_price_multiplier,
+      price: truncate2(item.wholesale_cost * config.employee_price_multiplier),
     };
   }
   // Otherwise, apply default pricing

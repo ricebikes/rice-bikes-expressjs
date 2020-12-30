@@ -5,6 +5,7 @@ var Item = require('../models/Item');
 var adminMiddleware = require('../middleware/AdminMiddleware');
 var authMiddleware = require('../middleware/AuthMiddleware');
 const OrderRequest = require('./../models/OrderRequest');
+const Order = require('../models/Order');
 
 router.use(bodyParser.json());
 
@@ -132,14 +133,13 @@ router.post('/', function (req, res) {
  * Lets an item be updated. Simply overwrites the current item with whatever is sent.
  */
 router.put('/:id', function (req, res) {
-    const { name, upc, category, size, brand, condition, standard_price, wholesale_cost, desired_stock, minimum_stock } = req.body;
+    const { name, category, standard_price, wholesale_cost, desired_stock } = req.body;
     // validate the request before proceeding. Be less aggressive than we are when validating new items.
-    if (name
+    if (!(name
         && category != undefined
-        && brand != undefined
         && (standard_price != undefined)
         && (wholesale_cost != undefined)
-        && (desired_stock != undefined)) {
+        && (desired_stock != undefined))) {
         return res.status(400).json({ "err": "Malformed request, missing fields", "status": 400 });
     }
     Item.findByIdAndUpdate(req.params.id, req.body, { new: true }, function (err, item) {
@@ -183,6 +183,13 @@ async function createOrUpdateOrderRequest(item) {
         const regex = /[Aa]utomatically ([Cc]reated|[Uu]pdated)/;
         // Update the request's desired quantity.
         if (order_request.quantity < item.desired_stock - item.stock) {
+            if (order_request.orderRef) {
+                // Update price of the order
+                let order = await Order.findById(order_request.orderRef);
+                let newPrice = order.total_price + order_request.itemRef.wholesale_cost * ((item.desired_stock - item.stock) - order_request.quantity);
+                order.total_price = newPrice;
+                await order.save();
+            }
             order_request.quantity = item.desired_stock - item.stock;
         }
         if (!regex.test(order_request.notes)) {
@@ -210,8 +217,9 @@ async function increaseItemStock(itemID, quantity) {
     /**
      * Check to see if we need to automatically create a new order request for this item.
      * This is done if the item's stock falls below the desired stock level.
+     * Only do this if the desired stock is set above 0
      */
-    if (itemRef.stock < itemRef.desired_stock) {
+    if (itemRef.stock < itemRef.desired_stock && itemRef.desired_stock > 0) {
         await createOrUpdateOrderRequest(itemRef);
     }
     const restockedItem = await itemRef.save();

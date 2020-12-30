@@ -19,7 +19,7 @@ let CONFIG = function() {
         rate: 0.0825,
         DBname: "Sales Tax"
       },
-      employee_price_multiplier: 1.17
+      employee_price_multiplier: 1.0809 // 1.0809 * 1.0825 = 1.17
     }
   } else {
     return {
@@ -39,7 +39,7 @@ let CONFIG = function() {
         rate: 0.0825,
         DBname: "Sales Tax"
       },
-      employee_price_multiplier: 1.17
+      employee_price_multiplier: 1.0809 // 1.0809 * 1.0825 = 1.17
     }
   }
 };

@@ -504,9 +504,10 @@ async function unfulfillTransactionsOrderRequest(requestRef, transactions) {
             } else {
                 throw { err: "Could not find transaction to add item to", status: 404 };
             }
-        }
-        if (transactionRef.complete) {
-            completedTransactions.push(transaction_id);
+        } else {
+            if (transactionRef.complete) {
+                completedTransactions.push(transaction_id);
+            }
         }
     }
     if (completedTransactions.length > 0) {

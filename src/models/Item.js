@@ -14,7 +14,7 @@ var ItemSchema = new mongoose.Schema({
     // Managed items are special items only the backend should be adding and removing from transactions
     managed: { type: Boolean, default: false },
     // If item drops below desired stock, an active order request will be created for it automatically
-    desired_stock: { type: Number, required: true },
+    desired_stock: { type: Number, required: true, default: 0},
     // minimum stock is optional, but if set should be considered a "rush order" value-- if item stock goes below this, item must be ordered as soon as possible
     minimum_stock: { type: Number, default: 0},
     stock: { type: Number, default: 0 },
