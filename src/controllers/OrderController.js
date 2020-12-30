@@ -152,7 +152,7 @@ router.put('/:id/notes', async (req, res) => {
  */
 router.post('/:id/order-request', async (req, res) => {
     try {
-        if (!req.body.order_request_id) return res.status(400).json({ err: "No order request specified", status: 400 });
+        if (req.body.order_request_id == null) return res.status(400).json({ err: "No order request specified", status: 400 });
         const orderRequest = await OrderRequest.findById(req.body.order_request_id);
         if (!orderRequest) return res.status(404).json({ err: "Order request specified, but none found!", status: 404 });
         if (orderRequest.orderRef) {
