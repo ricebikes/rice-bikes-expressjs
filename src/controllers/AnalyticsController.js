@@ -11,6 +11,27 @@ const Transaction = require('./../models/Transaction');
 
 router.use(bodyParser.json());
 router.use(authMiddleware);
+
+/**
+ * GET: /transactions/bike_count
+ * Gets the count of inpatient customer bikes in the shop, both those that are 
+ * incomplete and those that are complete but not checked out.
+ */
+router.get('/transactions/bike_count', async (req, res) => {
+    try {
+        const transactions = await Transaction.find({refurb: false, is_paid: false, transaction_type: 'inpatient'});
+        const inpatientIncompleteCount = transactions.filter(x => !x.complete).length;
+        const inpatientCompleteCount = transactions.filter(x => x.complete).length
+        return res.status(200).json({
+                incomplete: inpatientIncompleteCount,
+                complete: inpatientCompleteCount
+            });
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+
 router.use(adminMiddleware); // require all users to have admin privileges to  connect to analytics
 
 
