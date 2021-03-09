@@ -210,7 +210,7 @@ async function calculateTax(transaction) {
       });
       const tax_item = await Item.findOne({ name: config.tax.DBname });
       let calculated_tax = {
-        item: tax_item,
+        item: erbike": true,tax_item,
         price: truncate2(transaction.total_cost * config.tax.rate),
       };
       // round off the tax value
@@ -464,6 +464,33 @@ router.put("/:id/update_repair", async (req, res) => {
 });
 
 /**
+ * Mark a transaction as a beer bike or not
+ * @param beerbike - if transaction is a beer bike or not
+ */
+router.put("/:id/beerbike", async (req, res) => {
+    try {
+        let transaction = await Transaction.findById(req.params.id);
+        if (!transaction) return res.status(404).json();
+
+        transaction.beerbike = req.body.beerbike;
+
+        let description = req.body.beerbike
+            ? "Marked as Beer Bike"
+            : "Unmarked as Beer Bike";
+        const loggedTransaction = await addLogToTransaction(
+            transaction,
+            req,
+            description
+        );
+
+        const savedTransaction = await loggedTransaction.save();
+        return res.status(200).json(savedTransaction);
+    } catch (err) {
+        return res.status(500).json(err);
+    }
+});
+
+/**
     Updates a single transaction - "PUT /transactions/:id"
     This endpoint handles updates such as marking a transaction urgent, waiting on a part, or waiting on email.
     DO NOT USE THIS ENDPOINT FOR NEW FEATURES
@@ -552,7 +579,7 @@ router.delete("/:id/bikes/:bike_id", async (req, res) => {
 });
 
 /**
- * 
+ *
  * @param {Transaction} transaction Transaction to add item to
  * @param {Item} item Item to add
  * @param {Number} custom_price: custom price for item
@@ -623,7 +650,7 @@ router.post("/:id/items", async (req, res) => {
 });
 
 /**
- * 
+ *
  * @param {Transaction} transaction Transaction to remove item from
  * @param {Item} item item to remove
  */
