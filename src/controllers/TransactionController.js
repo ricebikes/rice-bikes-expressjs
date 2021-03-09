@@ -210,7 +210,7 @@ async function calculateTax(transaction) {
       });
       const tax_item = await Item.findOne({ name: config.tax.DBname });
       let calculated_tax = {
-        item: erbike": true,tax_item,
+        item: tax_item,
         price: truncate2(transaction.total_cost * config.tax.rate),
       };
       // round off the tax value
