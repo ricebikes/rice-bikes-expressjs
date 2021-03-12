@@ -16,6 +16,7 @@ var TransactionSchema = new mongoose.Schema({
   complete: { type: Boolean, default: false },
   is_paid: { type: Boolean, default: false },
   refurb: { type: Boolean, default: false },
+  beerbike: { type: Boolean, default: false },
   paymentType: { type: [String], default: [] },
   waiting_email: { type: Boolean, default: false },
   urgent: { type: Boolean, default: false },
