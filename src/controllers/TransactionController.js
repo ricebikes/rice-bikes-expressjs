@@ -511,7 +511,8 @@ Posts a bike to a transaction - "POST /transactions/:id/bikes"
 router.post("/:id/bikes", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404);
+    if (!transaction) return res.status(404).json();
+    if (transaction.bikes.length > 0) return res.status(400).json({ err: "Only one bike allowed per transaction" });
     let bike;
     if (req.body._id) {
       bike = await Bike.findById(req.body.id);
