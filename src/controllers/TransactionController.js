@@ -392,17 +392,11 @@ router.put("/:id/complete", async (req, res) => {
  * Requires user's ID in header
  * @param is_paid - if the transaction is being marked as paid or not
  */
-<<<<<<< HEAD
-router.put("/:id/mark_paid", async (req, res) => {
+router.put('/:id/mark_paid', async (req,res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-=======
-router.put('/:id/mark_paid',function (req,res) {
-  Transaction.findById(req.params.id, function (err,transaction) {
-    if (err) return res.status(500).send(err);
     // Check to make sure transaction has been completed
     if (!transaction.complete) return res.status(400).send("Cannot checkout an incomplete transaction");
->>>>>>> master
     if (req.body.is_paid && !transaction.is_paid) {
       // Send receipt email
       await mailer.send({
