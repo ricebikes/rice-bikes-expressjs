@@ -11,7 +11,10 @@ router.use(authmiddleware);
 
 
 router.get('/search', function (req, res) {
-  Repair.find({$text: {$search: req.query.q}}, function (err, repairs) {
+  if (!req.query.q) {
+    return res.status(400).send();
+  }
+  Repair.find({$text: {$search: req.query.q}, disabled: false}, function (err, repairs) {
     if (err) return res.status(500);
     res.status(200).json(repairs);
   });
@@ -22,7 +25,7 @@ router.get('/search', function (req, res) {
 router.use(adminMiddleware);
 // get all repairs
 router.get('/',function (req, res) {
-    Repair.find({}, function (err,repairs) {
+    Repair.find({disabled: false}, function (err,repairs) {
         if(err) return res.status(500);
         res.status(200).json(repairs);
 
