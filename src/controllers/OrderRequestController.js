@@ -238,7 +238,7 @@ router.put('/:id/partnumber', async (req, res) => {
     try {
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
-        if (!req.body.partNum) return res.status(400).json({ err: "Empty or malformed part number string", status: 400 });
+        if (!req.body.partNum == null) return res.status(400).json({ err: "Empty or malformed part number string", status: 400 });
         orderRequest.partNumber = req.body.partNum;
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, "Updated part number to " + orderRequest.partNumber);
         const finalOrderReq = await loggedOrderReq.save();
