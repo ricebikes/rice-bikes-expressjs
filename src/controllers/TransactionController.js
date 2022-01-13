@@ -42,7 +42,8 @@ router.post("/", async (req, res) => {
         });
       }
       // See if the customer is an employee, and apply discount if so
-      const users = await User.find({});
+      // Only search for active employees
+      const users = await User.find({active: true});
       let employee = false;
       for (user of users) {
         if (user.username === customer.email.replace("@rice.edu", "")) {

@@ -46,7 +46,8 @@ router.post('/', function (req, res) {
     username: req.body.username,
     roles: req.body.roles,
     firstname: req.body.firstName,
-    lastname: req.body.lastName
+    lastname: req.body.lastName,
+    active: true // new user is always active on creation
   }, function (err, newUser) {
     if (err) res.status(500);
     res.status(200).json(newUser);
@@ -67,8 +68,10 @@ router.put('/:id', async function (req, res) {
   if (!req.body.username ||
     !req.body.roles ||
     !req.body.firstName ||
-    !req.body.lastName) {
-    return res.status(400).json({ err: "Username, roles, firstName, and lastName are required", status: 400 });
+    !req.body.lastName ||
+    typeof req.body.active != 'boolean') 
+  {
+    return res.status(400).json({ err: "Username, roles, firstName, lastName, and active are required", status: 400 });
   }
   try {
     const user = await User.findById(req.params.id);
@@ -79,6 +82,7 @@ router.put('/:id', async function (req, res) {
     user.lastname = req.body.lastName;
     user.username = req.body.username;
     user.roles = req.body.roles;
+    user.active = !!req.body.active;
     let savedUser = await user.save();
     return res.status(200).json(savedUser);
 
