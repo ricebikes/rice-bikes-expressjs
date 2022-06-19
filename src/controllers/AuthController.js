@@ -6,7 +6,7 @@ var request = require('request');
 var xmlParser = require('xml2js').parseString;
 var stripPrefix = require('xml2js').processors.stripPrefix;
 
-var config = require('../config')();
+var config = require('../config');
 
 var User = require('../models/User');
 

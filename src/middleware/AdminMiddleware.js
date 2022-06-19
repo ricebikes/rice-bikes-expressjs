@@ -4,7 +4,7 @@ var authRouter = express.Router();
 var bodyParser = require('body-parser');
 
 var User = require('../models/User');
-var config = require('../config')();
+var config = require('../config');
 
 authRouter.use(bodyParser.json());
 

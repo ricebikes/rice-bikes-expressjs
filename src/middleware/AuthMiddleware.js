@@ -3,7 +3,7 @@ var jwt = require('jsonwebtoken');
 var authRouter = express.Router();
 var bodyParser = require('body-parser');
 
-var config = require('../config')();
+var config = require('../config');
 
 authRouter.use(bodyParser.json());
 

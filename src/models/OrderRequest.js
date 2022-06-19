@@ -6,7 +6,7 @@
 
 const mongoose = require('mongoose');
 const autoIncrement = require('mongoose-plugin-autoinc');
-const config = require('../config')();
+const config = require('../config');
 
 var connection = mongoose.createConnection(config.db_uri);
 
