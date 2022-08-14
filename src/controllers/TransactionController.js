@@ -45,11 +45,14 @@ router.post("/", async (req, res) => {
       // Only search for active employees
       const users = await User.find({active: true});
       let employee = false;
-      for (user of users) {
-        if (user.username === customer.email.replace("@rice.edu", "")) {
-          // Go by username to find employee.
-          employee = true;
-          break;
+      // do not apply employee pricing to retrospec transaction
+      if (req.body.transaction_type != 'retrospec'){
+        for (user of users) {
+          if (user.username === customer.email.replace("@rice.edu", "")) {
+            // Go by username to find employee.
+            employee = true;
+            break;
+          }
         }
       }
       let transaction = await Transaction.create({
@@ -218,10 +221,11 @@ async function calculateTax(transaction) {
       if (calculated_tax.price > Number.EPSILON) {
         // Tax is nonzero, add a tax item
         transaction.items.push(calculated_tax);
+        
+        transaction.total_cost = truncate2(
+          transaction.total_cost + calculated_tax.price
+        );
       }
-      transaction.total_cost = truncate2(
-        transaction.total_cost + calculated_tax.price
-      );
       return transaction;
     }
   } catch (err) {
@@ -492,6 +496,67 @@ router.put("/:id/beerbike", async (req, res) => {
         return res.status(500).json(err);
     }
 });
+
+
+/**
+ * Update the customer on a transaction
+ * Only intended to be used for retrospec transactions
+ */
+router.put("/:id/customer", async (req, res) => {
+  try{
+    // find transaction
+    const transaction = await Transaction.findById(req.params.id);
+    if (!transaction) return res.status(404).json();
+
+    if (!req.body.customer){
+      res.status(400).json({ err: "No customer specified", status: 400 });
+    }
+
+    let customer;
+    if (req.body.customer._id) {
+      // Find the customer we are told exists.
+      customer = await Customer.findById(req.body.customer._id);
+      if (!customer) return res.status(404).json({ err: "Customer not found", status: 404 });
+    } else {
+      // Create a new customer.
+      customer = await Customer.create({
+        first_name: req.body.customer.first_name,
+        last_name: req.body.customer.last_name,
+        email: req.body.customer.email,
+      });
+    }
+
+    console.log("found customer!")
+    console.log(customer)
+
+    // See if the customer is an employee, and apply discount if so
+    // Only search for active employees
+    const users = await User.find({active: true});
+    let employee = false;
+    for (user of users) {
+      if (user.username === customer.email.replace("@rice.edu", "")) {
+        // Go by username to find employee.
+        employee = true;
+        break;
+      }
+    }
+
+    transaction.customer = customer._id;
+
+    transaction.employee = employee;
+    const loggedTransaction = await addLogToTransaction(
+      transaction,
+      req,
+      `Reassigned customer to ${req.body.customer.email}`
+    );
+    const savedTransaction = await loggedTransaction.save();
+    res.status(200).json(savedTransaction);
+
+  } catch (err) {
+    console.log(err)
+    res.status(500).json(err)
+  }
+})
 
 /**
     Updates a single transaction - "PUT /transactions/:id"
