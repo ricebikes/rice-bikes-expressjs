@@ -81,10 +81,16 @@ Gets all transactions - "GET /transactions"
 
 If query parameters are supplied, they are passed in to the find function - "GET /transactions?complete=true" finds
 transactions with the property { "complete": true }.
+
+Query parameters can be JSON objects to allow for mongo queries
+Bad practice but it works
  */
 router.get("/", async (req, res) => {
   try {
     let query = req.query;
+    for (let [key, value] of Object.entries(query)) {
+      query[key] = JSON.parse(value)
+    }
     // If query requests all transactions waiting on parts, modify it to search for transactions with one or more order requests
     if (query.waiting_part) {
       delete query.waiting_part;
@@ -499,6 +505,34 @@ router.put("/:id/beerbike", async (req, res) => {
 
 
 /**
+ * Update the status of a transaction
+ * Only used on retrospec transactions
+ */
+router.put("/:id/status", putStatus)
+
+
+async function putStatus(req, res) {
+  try {
+    let transaction = await Transaction.findById(req.params.id)
+    if (!transaction) return res.status(404).json()
+
+    transaction.status = req.body.status;
+
+    let description = `Updated status to ${req.body.status}`
+    const loggedTransaction = await addLogToTransaction(
+      transaction,
+      req,
+      description
+    )
+
+    const savedTransaction = await loggedTransaction.save();
+    return res.status(200).json(savedTransaction);
+  } catch (err) {
+    return res.status(500).json(err)
+  }
+}
+
+/**
  * Update the customer on a transaction
  * Only intended to be used for retrospec transactions
  */
@@ -892,6 +926,22 @@ async function addOrderRequestToTransaction(transaction, orderRequest) {
   let updatedTransaction = await transaction.save();
   return updatedTransaction;
 }
+
+
+router.put("/:id/forsale", async (req, res, next) => {
+  const user_id = req.headers["user-id"];
+  if (!user_id) return res.status(400).json({ error: "did not find a user-id header", status: 400 });
+  try {
+    req.body.status = "for sale"
+    const user = await User.findById(user_id);
+    if (user.roles.includes('admin')) return next()
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json(err)
+  }
+  return res.status(403).json({error: "insufficient permissions to mark bike for sale"})
+}, putStatus)
+
 
 module.exports = {
   router: router,
