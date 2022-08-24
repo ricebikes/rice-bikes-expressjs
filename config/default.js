@@ -10,6 +10,16 @@ module.exports = {
         host: 'smtp.ethereal.email',
         port: 465
     },
+    puppeteer : {
+        userDataDir: './puppeteer', // cache scripts, css, etc
+        headless: true // do not render browser window
+    },
+    khs: {
+        userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.39 Safari/537.36',
+        productDetailsURL: 'https://www.khsdealers.com/ProductMgt.ashx?AjaxCall=GET_PRODUCTLIST',
+        searchPrefixURL: 'https://www.khsdealers.com/Products.aspx?QuickSearch=',
+        productQuerySelector: 'div[pagination-id="ProductGrp"]'
+    },
     tax: {
         cutoff_date: new Date(1580277600000), // 06:00 GMT on 1/29/2020 (Tax is only applied after this date)
         rate: 0.0825,

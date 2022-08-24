@@ -6,6 +6,7 @@ var adminMiddleware = require('../middleware/AdminMiddleware');
 var authMiddleware = require('../middleware/AuthMiddleware');
 const OrderRequest = require('./../models/OrderRequest');
 const Order = require('../models/Order');
+const KhsProduct = require('../models/KhsProduct')
 
 router.use(bodyParser.json());
 
@@ -78,6 +79,67 @@ router.get('/search', function (req, res) {
         res.status(200).json(items);
     });
 });
+
+
+/**
+ * GET /upc/:upc
+ * Searches khs for item matching the given upc
+ * Used for refreshing an item client sise
+ */
+ router.get('/upc/:upc', async function (req, res) {
+
+    const upc = req.params.upc
+
+    try {
+        const product = await KhsProduct.fetchProduct(upc)
+        if (!product && !res.headersSent) {
+            res.status(404).json({ERROR: "UPC not found"})
+        } else {
+            // must be a product, otherwise headers would have been sent
+            const itemJSON = await KhsProduct.validateItem(product)
+            res.status(200).json(itemJSON)
+        }
+    } catch (err) {
+        res.status(500).send(err)
+    }
+    
+});
+
+
+/**
+ * PUT /upc/:upc
+ * Create item corresponding to the given UPC if it does not exist
+ * First searches Mongo, and then fals back to supplier
+ * Returns.
+ *  200 Item found in Mongo
+ *  201 Item created from suppliers
+ *  400 UPC not found in Mongo or suppliers
+ */
+router.put('/upc/:upc', async function (req, res) {
+
+
+    const upc = req.params.upc
+    const query = {upc}
+    
+    try{
+        let item = await Item.findOne(query)
+        if (item) {
+            res.status(200).json(item)
+        } else {
+            const product = await KhsProduct.fetchProduct(upc)
+            if (product) {
+                const itemJSON = await KhsProduct.validateItem(product)
+                item = await Item.create(itemJSON)
+                res.status(201).json(item)
+            }
+        }
+    } catch (err) {
+        res.status(500).json(err)
+    }
+
+    if (!res.headersSent) res.status(400).json({ERROR: "UPC not found"})
+})
+
 
 // everything below here is only for admins, so use the admin middleware to block it
 router.use(adminMiddleware);
