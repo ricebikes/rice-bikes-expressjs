@@ -8,6 +8,7 @@ var connection = mongoose.createConnection(config.db_uri);
 var TransactionSchema = new mongoose.Schema({
   description: String,
   transaction_type: String,
+  status: String,
   date_created: Date,
   date_completed: Date,
   total_cost: { type: Number, default: 0 },
