@@ -518,6 +518,11 @@ async function putStatus(req, res) {
 
     transaction.status = req.body.status;
 
+    // enqueue transaction at time of building status set
+    if (transaction.status == 'building') {
+      transaction.date_created = Date.now()
+    }
+
     let description = `Updated status to ${req.body.status}`
     const loggedTransaction = await addLogToTransaction(
       transaction,
