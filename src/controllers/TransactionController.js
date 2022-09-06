@@ -565,24 +565,20 @@ router.put("/:id/customer", async (req, res) => {
       });
     }
 
-    console.log("found customer!")
-    console.log(customer)
-
-    // See if the customer is an employee, and apply discount if so
-    // Only search for active employees
-    const users = await User.find({active: true});
-    let employee = false;
+    // See if the customer is a head mechanic, and update reserved if appropriate
+    const users = await User.find({roles: "head_mechanic"});
+    let head_mechanic = false;
     for (user of users) {
       if (user.username === customer.email.replace("@rice.edu", "")) {
         // Go by username to find employee.
-        employee = true;
+        head_mechanic = true
         break;
       }
     }
 
     transaction.customer = customer._id;
 
-    transaction.employee = employee;
+    transaction.reserved = !head_mechanic;
     const loggedTransaction = await addLogToTransaction(
       transaction,
       req,

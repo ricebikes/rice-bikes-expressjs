@@ -19,12 +19,38 @@ router.use(authMiddleware);
  */
 router.get('/transactions/bike_count', async (req, res) => {
     try {
-        const transactions = await Transaction.find({refurb: false, is_paid: false, transaction_type: 'inpatient'});
-        const inpatientIncompleteCount = transactions.filter(x => !x.complete).length;
-        const inpatientCompleteCount = transactions.filter(x => x.complete).length
+        // we consdier only inpatient transactions,
+        // or retrospec transactions w/ status in [builing, for sale]
+
+        const transactions = await Transaction.find({
+            refurb: false, 
+            is_paid: false, 
+            $or: [
+                {transaction_type : 'inpatient' },
+                {transaction_type : 'retrospec', status : { $in: ['building', 'built', 'for sale']} },
+            ]
+        });
+
+        const inpatientIncompleteCount = transactions.filter(tx => {
+            if (tx.complete) return false
+            if (tx.transaction_type == 'retrospec' && tx.status != 'building') return false
+            return true
+        }).length;
+
+        const inpatientCompleteCount = transactions.filter(tx => {
+            if (!tx.complete) return false
+            if (tx.transaction_type == 'retrospec' && !transaction_type.reserved) return false
+            return true
+        }).length
+
+        const safetyCheckCount = transactions.filter(tx => 
+            tx.transaction_type == 'retrospec' && tx.status == 'built'
+        ).length
+
         return res.status(200).json({
                 incomplete: inpatientIncompleteCount,
-                complete: inpatientCompleteCount
+                complete: inpatientCompleteCount,
+                check: safetyCheckCount
             });
     } catch (err) {
         res.status(500).send(err);
