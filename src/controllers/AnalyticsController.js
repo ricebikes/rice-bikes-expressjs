@@ -39,7 +39,7 @@ router.get('/transactions/bike_count', async (req, res) => {
 
         const inpatientCompleteCount = transactions.filter(tx => {
             if (!tx.complete) return false
-            if (tx.transaction_type == 'retrospec' && !transaction_type.reserved) return false
+            if (tx.transaction_type == 'retrospec' && !tx.reserved) return false
             return true
         }).length
 
