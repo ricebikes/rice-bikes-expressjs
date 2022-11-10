@@ -206,6 +206,7 @@ function truncate2(num) {
  * @return {Promise<Transaction>} transaction with correct tax value
  */
 async function calculateTax(transaction) {
+  let discount = 0;
   /*  Rice Bikes did not tax before Wednesday, January 29th 2020 */
   try {
     if (transaction.date_created > config.tax.cutoff_date) {
@@ -215,13 +216,19 @@ async function calculateTax(transaction) {
         if (candidate.item.name === config.tax.DBname) {
           // remove this item, and drop the cost to remove current tax
           transaction.total_cost -= candidate.price;
+          transaction.total_cost = truncate2(transaction.total_cost);
           return false;
-        } else return true; // not the tax item, keep it
+        } 
+        else if (candidate.price < 0) { // don't include discounts in tax
+          discount += candidate.price;
+          return true;
+        }
+        else return true; // not the tax item, keep it
       });
       const tax_item = await Item.findOne({ name: config.tax.DBname });
       let calculated_tax = {
         item: tax_item,
-        price: truncate2(transaction.total_cost * config.tax.rate),
+        price: truncate2((transaction.total_cost - discount) * config.tax.rate),
       };
       // round off the tax value
       if (calculated_tax.price > Number.EPSILON) {
