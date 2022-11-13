@@ -3,3 +3,4 @@
 /scripts
 /config/prod.json
 /puppeteer
+package-lock.json
