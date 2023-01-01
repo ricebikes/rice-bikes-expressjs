@@ -90,6 +90,7 @@ class KhsProduct {
     static async validateItem(product) {
 
         try {
+            console.log("product info: ", product);
             const itemJSON = {
                 name: product.Title + (
                     !Array.isArray(product.TitleSupportList) ? "" :
@@ -98,15 +99,21 @@ class KhsProduct {
                             .join("")
                 ),
                 upc: product.UPC_No,
-                category: product.NavCategory,
+                category_1: product.NavCategory,
+                category_2: product.SecondaryNanoGroupDesc,
+                category_3: product.NaviSubSubCat,
                 brand: product.SubCategory,
-                size: product.TitleSupportList
-                    .map(spect => spect.SpectValue)
-                    .filter(attr => attr)
-                    .join("/"),
+                specifications: {
+                    "Fluff": product.Fluff,
+                    "Copy01": product.Copy01,
+                    "Copy02": product.Copy02,
+                    "Copy03": product.Copy03,
+                    "Copy04": product.Copy03,
+                    "Copy05": product.Copy03,
+                },
                 wholesale_cost: product.Unit_Price,
                 standard_price: product.MSRP || product.MAPPrice || product.Unit_Price * 1.5,
-                desired_stock: 0
+
             }
 
             await Item.validate(itemJSON);

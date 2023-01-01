@@ -80,13 +80,12 @@ router.get('/search', function (req, res) {
     });
 });
 
-
 /**
- * GET /upc/:upc
+ * GET /upc/khs/:upc
  * Searches khs for item matching the given upc
- * Used for refreshing an item client sise
+ * Used for refreshing an item client sise -- what does this mean? -jing
  */
- router.get('/upc/:upc', async function (req, res) {
+ router.get('/upc/khs/:upc', async function (req, res) {
 
     const upc = req.params.upc
 
@@ -104,7 +103,6 @@ router.get('/search', function (req, res) {
     }
     
 });
-
 
 /**
  * PUT /upc/:upc
