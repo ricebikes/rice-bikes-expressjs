@@ -1,0 +1,13 @@
+{
+	"category1_instance1": {
+		"category2_instance1" : [
+			"category3_instance1",
+			"category3_instance2",
+			"category3_instance3"
+		],
+		"category2_instance2" : [
+			"category3_instance4",
+			"category3_instance5"
+		]
+	}
+}
