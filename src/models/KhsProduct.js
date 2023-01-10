@@ -4,7 +4,6 @@ const config = require('../config.js');
 
 class KhsProduct {
 
-
     // KHS redirects any request to the homepage if cookies are not present
     // it appears cookies usually expire 2 hours after generations
     // even the presence of expired cookies will be accepted and avoid a redirect
@@ -90,7 +89,8 @@ class KhsProduct {
     static async validateItem(product) {
 
         try {
-            console.log("product info: ", product);
+            let specMap = new Map();
+            product.AdditionProductSpectList.map(object => specMap.set(object.SpectName, object.SpectValue));
             const itemJSON = {
                 name: product.Title + (
                     !Array.isArray(product.TitleSupportList) ? "" :
@@ -103,17 +103,10 @@ class KhsProduct {
                 category_2: product.SecondaryNanoGroupDesc,
                 category_3: product.NaviSubSubCat,
                 brand: product.SubCategory,
-                specifications: {
-                    "Fluff": product.Fluff,
-                    "Copy01": product.Copy01,
-                    "Copy02": product.Copy02,
-                    "Copy03": product.Copy03,
-                    "Copy04": product.Copy03,
-                    "Copy05": product.Copy03,
-                },
+                specifications: specMap,
+                features: product.AdditionProductInfoList,
                 wholesale_cost: product.Unit_Price,
                 standard_price: product.MSRP || product.MAPPrice || product.Unit_Price * 1.5,
-
             }
 
             await Item.validate(itemJSON);

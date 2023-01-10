@@ -19,8 +19,8 @@ var ItemSchema = new mongoose.Schema({
 });
 
 ItemSchema.index({ name: "text"});
-ItemSchema.index({ upc: 1 }, {sparse: true}); // sparse should be false if it's required...
-ItemSchema.index({ category_1: 1, category_2: 1, category_3: 1});
+ItemSchema.index({ upc: 1 }, {unique: true});
+ItemSchema.index({ category_1: 1, category_2: 1, category_3: 1}, {unique: true});
 
 mongoose.model('Item', ItemSchema);
 

@@ -7,6 +7,7 @@ var authMiddleware = require('../middleware/AuthMiddleware');
 const OrderRequest = require('./../models/OrderRequest');
 const Order = require('../models/Order');
 const KhsProduct = require('../models/KhsProduct')
+const item_categories = require('../../config/item_categories');
 
 router.use(bodyParser.json());
 
@@ -17,10 +18,7 @@ router.use(authMiddleware);
  * Allows frontend to produce a list of distinct item categories for users to select between when searching
  */
 router.get('/categories', function (req, res) {
-    Item.distinct('category', function (err, categories) {
-        if (err) return res.status(500).json(err);
-        res.status(200).json(categories);
-    })
+    res.status(200).json(item_categories);
 });
 
 /**
@@ -97,10 +95,10 @@ router.get('/search', function (req, res) {
  */
 router.put('/upc/:upc', async function (req, res) {
 
-
     const upc = req.params.upc
     const query = {upc}
     
+    // look for upc existing in database
     try{
         let item = await Item.findOne(query)
         if (item) {
@@ -114,12 +112,12 @@ router.put('/upc/:upc', async function (req, res) {
             }
         }
     } catch (err) {
-        res.status(500).json(err)
+        console.log("unexpected error");
+        res.status(500).json({ERROR: "Unexpected error"})
     }
 
-    if (!res.headersSent) res.status(400).json({ERROR: "UPC not found"})
+    if (!res.headersSent) res.status(400).json({ERROR: "Unknown UPC"})
 })
-
 
 // everything below here is only for admins, so use the admin middleware to block it
 // router.use(adminMiddleware);
