@@ -76,6 +76,7 @@ router.get('/search', function (req, res) {
         } else {
             // must be a product, otherwise headers would have been sent
             const itemJSON = await KhsProduct.validateItem(product)
+            itemJSON.last_updated = new Date();
             res.status(200).json(itemJSON)
         }
     } catch (err) {
@@ -107,6 +108,7 @@ router.put('/upc/:upc', async function (req, res) {
             const product = await KhsProduct.fetchProduct(upc)
             if (product) {
                 const itemJSON = await KhsProduct.validateItem(product)
+                itemJSON.last_updated = new Date();
                 item = await Item.create(itemJSON)
                 res.status(201).json(item)
             }
@@ -132,20 +134,22 @@ router.use(adminMiddleware);
  * brand: item brand
  * standard_price: retail price of item
  * wholesale_cost: wholesale price we pay for item
+ * in_stock: the quantity in stock
  */
 // adds an item to the db. Note that quantity should start at 0
 router.post('/', function (req, res) {
-    const { name, upc, category_1, category_2, category_3, brand, standard_price, wholesale_cost, specifications, features } = req.body;
+    const { name, upc, category_1, category_2, category_3, brand, standard_price, wholesale_cost, specifications, features, in_stock, is_khs } = req.body;
     // validate the request before proceeding
     if (!(upc
         && name
         && category_1
         && brand
         && (standard_price != undefined)
-        && (wholesale_cost != undefined))) {
+        && (wholesale_cost != undefined)
+        && (in_stock != undefined))) {
         return res.status(400).json({ "err": "Malformed request, missing fields", "status": 400 });
     }
-    Item.create({
+    let newItem = {
         name: name,
         upc: upc,
         category_1: category_1,
@@ -155,8 +159,12 @@ router.post('/', function (req, res) {
         standard_price: standard_price,
         wholesale_cost: wholesale_cost,
         specifications: specifications,
-        features: features
-    }, function (err, item) {
+        features: features,
+        in_stock: in_stock
+    };
+    if(is_khs) newItem.last_updated = new Date();
+    console.log(newItem);
+    Item.create(newItem, function (err, item) {
         if (err) return res.status(500).json(err);
         res.status(200).json(item);
         console.log("item", item);
@@ -187,7 +195,7 @@ router.put('/:id', function (req, res) {
  * backend, and removing or adding one to a transaction should not be possible.
  */
 router.get('/', function (req, res) {
-    Item.find({ managed: false }, function (err, items) {
+    Item.find({}, function (err, items) {
         if (err) return res.status(500).send(err);
         return res.status(200).send(items);
     });

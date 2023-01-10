@@ -15,7 +15,10 @@ var ItemSchema = new mongoose.Schema({
     specifications: { type: Map, of: String }, //dict,
     features: [String], // array of strings
     standard_price: Number,
-    wholesale_cost: Number
+    wholesale_cost: Number,
+    in_stock: Number,
+
+    last_updated: Date,
 });
 
 ItemSchema.index({ name: "text"});

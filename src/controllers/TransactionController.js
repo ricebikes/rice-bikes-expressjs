@@ -106,12 +106,12 @@ router.get("/", async (req, res) => {
         employee: 0, complete: 0, is_paid: 0, refurb: 0, paymentType: 0
       });
     // Sort transactions here
-    transactions = transactions.sort((a, b) => {
+    transactions = transactions.sort((b, a) => {
       if ((a.urgent && b.urgent) || (!a.urgent && !b.urgent)) {
         return new Date(b.date_created).getTime() - new Date(a.date_created).getTime();
-      } else if (b.urgent) {
-        return 1;
       } else if (a.urgent) {
+        return 1;
+      } else if (b.urgent) {
         return -1;
       }
     });
