@@ -1,0 +1,463 @@
+{
+  "APPAREL": {
+    "Belts": null,
+    "Bracelets": null,
+    "Footwear": null,
+    "Gloves": null,
+    "Headwear": null,
+    "Jackets": null,
+    "Jerseys": {
+      "Mens Road Jerseys": null,
+      "MTB Jerseys": null,
+      "Womans Road Jerseys": null
+    },
+    "Pants and Tights": null,
+    "POP Display Systems": null,
+    "Shirts": null,
+    "Shorts": null,
+    "Warmers": null
+  },
+  "BAGS": {
+    "Backpacks": null,
+    "Bento Boxes": null,
+    "Cargo Bags": null,
+    "Frame Bags": null,
+    "Handlebar Bags": null,
+    "Hip Packs": null,
+    "Misc Bags": null,
+    "Panniers": null,
+    "Saddle Bags": null,
+    "Shoulder Bags": null,
+    "Tool Bags & Pouches": null,
+    "Travel Bags": null,
+    "Trunk Bags": null
+  },
+  "BEARINGS": {
+    "Bearing Retainers": null,
+    "Loose Bearings": null,
+    "Sealed Bearings": null
+  },
+  "BOTTOM BRACKETS": {
+    "BOTTOM BRACKETS": {
+      "19mm BMX Bottom Brackets": null,
+      "B.B. Adapters": null,
+      "B.B. Small Parts": null,
+      "BB RIGHT Bottom Brackets": null,
+      "BB30 Bottom Brackets": null,
+      "BB30A Bottom Brackets": null,
+      "BB386 EVO Bottom Brackets": null,
+      "BB86 92 Bottom Brackets": null,
+      "BB89 92 Bottom Brackets": null,
+      "BSA30 Bottom Brackets": null,
+      "External Threaded BB Cups": {
+        "For 19mm spindles": null,
+        "For 30mm spindles": null,
+        "Shimano Bottom Brackets": null,
+        "SRAM Bottom Brackets": null
+      },
+      "ISIS Bottom Brackets": null,
+      "Octalink Bottom Brackets": null,
+      "One-Piece Bottom Brackets": null,
+      "PF30 Bottom Brackets": {
+        "30 mm Bottom Brackets": null,
+        "Shimano Bottom Brackets": null,
+        "SRAM Dub Bottom Brackets": null,
+        "SRAM GXP Bottom Brackets": null
+      },
+      "Square Bottom Brackets": null,
+      "T47 Bottom Brackets": null
+    }
+  },
+  "DERAILLEURS": {
+    "Adapters": null,
+    "Covers": null,
+    "Front Derailleurs": null,
+    "Hangers": null,
+    "Pulleys": null,
+    "Rear Derailleurs": null
+  },
+  "BRAKE LEVERS": {
+    "Aero and TT Levers": null,
+    "BMX Levers": null,
+    "Brake Lever Accesories": null,
+    "Drop Bar Levers": null,
+    "Flat Bar Levers": null
+  },
+  "BRAKE PADS": {
+    "Bolt-On": null,
+    "Disc Pads": {
+      "Avid / SRAM Compatible": null,
+      "Bengal Compatible": null,
+      "Formula Compatible": null,
+      "Hayes Compatible": null,
+      "Hope Compatible": null,
+      "Magura Compatible": null,
+      "Promax Compatible": null,
+      "Shimano Compatible": null,
+      "Tektro / TRP Compatible": null
+    },
+    "MTB Inserts": null,
+    "Road Inserts": null,
+    "Road Pads": null,
+    "Threaded Post": null,
+    "Threadless Post": null
+  },
+  "BRAKES": {
+    "Bleed Kits": null,
+    "Brake Small Parts": null,
+    "Calipers": {
+      "BMX": null,
+      "Direct Mount": null,
+      "Regular Mount": null
+    },
+    "Cantilever Brakes": null,
+    "Disc Brake Adapters": null,
+    "Disc Brake Hose": null,
+    "Disc Brake Rotors": {
+      "6-Bolt Rotors": null,
+      "CenterLock Rings": null,
+      "CenterLock Rotors": null,
+      "Rotor Bolts": null
+    },
+    "Disc Brake Small Parts": null,
+    "Hydraulic Disc": {
+      "MTB": null,
+      "Pre-Bled MTB Kits": null,
+      "Pre-Bled Road/Gravel Kits": null,
+      "Road and Gravel": null
+    },
+    "Mechanical Disc": {
+      "BMX": null,
+      "MTB": null,
+      "Road and Gravel": null
+    },
+    "Rotor Adapters and Spacers": null,
+    "U-Brake": null,
+    "V-Brake": {
+      "BMX": null,
+      "BMX Brake Kits": null,
+      "MTB": null
+    },
+    "V-Brake Noodles": null
+  },
+  "CABLES AND HOUSING": null,
+  "CASSETTES": {
+    " 7spd Cassettes": null,
+    " 8spd Cassettes": null,
+    " 9spd Cassettes": null,
+    "10spd Cassettes": null,
+    "11spd Cassettes": null,
+    "12spd Cassettes": null,
+    "Cassette Accessories": null,
+    "Cogs": null
+  },
+  "CHAINGAURDS AND GUIDES": {
+    "Chain Guards": null,
+    "Chain Guide - Guard Small Parts": null,
+    "Chain Guide Tensioners": null,
+    "Chain Guides": null
+  },
+  "CHAINRINGS": {
+    "1x Chainrings": null,
+    "2x Chainrings": null,
+    "3x Chainrings": null,
+    "Chainring Small Parts": null
+  },
+  "CHAINS": {
+    "Chain Tensioners": null,
+    "Chains": {
+      " 1 Speed Chain": null,
+      " 6 Speed Chain": null,
+      " 7 Speed Chain": null,
+      " 8 Speed Chain": null,
+      " 9 Speed Chain": null,
+      "10 Speed Chain": null,
+      "11 Speed Chain": null,
+      "12 Speed Chain": null
+    },
+    "Connectors": {
+      " 1 Speed Connectors": null,
+      " 7 Speed Connectors": null,
+      " 8 Speed Connectors": null,
+      " 9 Speed Connectors": null,
+      "10 Speed Connectors": null,
+      "11 Speed Connectors": null,
+      "12 Speed Connectors": null
+    }
+  },
+  "CRANKS AND CRANKARMS": {
+    "BMX Cranks": null,
+    "Crank Small Parts": null,
+    "Gravel Cranks": null,
+    "Left Crank Arms": null,
+    "Mountain Cranks": null,
+    "One Piece Cranks": null,
+    "Road Cranks": null,
+    "Tandem Cranks": null,
+    "Track Cranks": null
+  },
+  "eBIKE PRODUCTS": {
+    "e-Cables": null,
+    "e-Diagnostics": null,
+    "e-Displays": null,
+    "e-Front Derailleurs": null,
+    "e-Junction Boxes": null,
+    "e-Power": null,
+    "e-Rear Derailleurs": null,
+    "e-Seatposts": null,
+    "e-Shifters": null,
+    "e-Tubes": null
+  },
+  "FENDERS": {
+    "Downtube Fenders": null,
+    "Fender Sets": null,
+    "Fender Small Parts": null,
+    "Front Fenders": null,
+    "Rear Fenders": null
+  },
+  "FORKS": {
+    "Fork Small Parts": null,
+    "Rigid Forks": null,
+    "Suspension Forks": null
+  },
+  "FREEWHEELS": {
+    "1spd Freewheels": null,
+    "6spd Freewheels": null,
+    "7spd Freewheels": null
+  },
+  "GRIPS AND TAPE": {
+    "Bar End Plugs": null,
+    "BMX Grips": null,
+    "Brake Lever Grips": null,
+    "Comfort Grips": null,
+    "Grip Accessories": null,
+    "Grips": null,
+    "Handlebar Tape": null,
+    "Handlebar Tape Accessories": null,
+    "Mountain Bike Grips": null
+  },
+  "HANDLEBARS": {
+    "BMX Bars": null,
+    "Cruiser Bars": null,
+    "Handlebar Accessories": null,
+    "Mountain Bars": null,
+    "Road Bars": null,
+    "Tri Bars": null,
+    "Urban Bars": null
+  },
+  "HEADSETS": {
+    "Caps, Star Nuts and Compressors": null,
+    "Headset Small Parts": null,
+    "Headset Spacers": null,
+    "Integrated Headsets": {
+      "1 1/4 in Integrated Lower": null,
+      "1 1/8 in Integrated Complete": null,
+      "1 1/8 in Integrated Lower": null,
+      "1 1/8 in Integrated Upper": null,
+      "1 in Integrated Complete": null,
+      "1.5 in Integrated Complete": null,
+      "1.5 in Integrated Lower": null,
+      "Integrated Lower Conversion": null,
+      "Tapered Integrated Complete": null,
+      "Tapered Integrated Lower": null
+    },
+    "Int-Ext Combo Headsets": {
+      "Internal External Headset Combo": null
+    },
+    "Semi Integrated Headsets": {
+      "1 1/8 in Semi Int Complete": null,
+      "1 1/8 in Semi Int Lower": null,
+      "1 1/8 in Semi Int Upper": null,
+      "1.5 in Semi Integrated Lower": null,
+      "Semi Int Complete Conversion": null,
+      "Semi Int Lower Conversion": null,
+      "Semi Int Upper Conversion": null,
+      "Tapered Semi Int Complete": null,
+      "Tapered Semi Int Lower": null
+    },
+    "Threaded Headsets": {
+      "1 in Complete Threaded Headsets": null
+    },
+    "Threadless Headsets": {
+      "1 1/8 in Threadless Complete": null,
+      "1 1/8 in Threadless Lower": null,
+      "1 1/8 in Threadless Upper": null,
+      "1 in Threadless Complete": null,
+      "1.5 in Threadless Complete": null,
+      "1.5 in Threadless Lower": null,
+      "Tapered Threadless Complete": null,
+      "Tapered Threadless Lower": null
+    }
+  },
+  "HELMETS": {
+    "Bucket Helmets": null,
+    "Enduro Helmets": null,
+    "Full Face Helmets": null,
+    "Helmet Accessories": null,
+    "Road Bike Helmets": null,
+    "Trail Helmets": null,
+    "Urban Helmets": null,
+    "Youth and Child Helmets": null
+  },
+  "HYDRATION": {
+    "Cage Mounts": null,
+    "Drink Holders": null,
+    "Hydration Packs": null,
+    "Water Bottle Cages": null,
+    "Water Bottles": null
+  },
+  "KICKSTANDS": {
+    "Center Kickstands": null,
+    "Direct Kickstands": null,
+    "Kickstand Small Parts": null,
+    "Rear Kickstands": null
+  },
+  "LIGHTS": {
+    "Front Lights": null,
+    "Light Accessories": null,
+    "Light Sets": null,
+    "Multi-Function Lights": null,
+    "Outdoor Lights": null,
+    "Rear Lights": null,
+    "Side Lights": null
+  },
+  "LOCKS": {
+    "Bike Tracker Mounts": null,
+    "Cable Locks": {
+      "Combo Cable Lock": null,
+      "Keyed Cable Lock": null
+    },
+    "Cables Only": null,
+    "Chain Locks": null,
+    "Cinch Locks": null,
+    "Folding Locks": null,
+    "Lock Accessories": null,
+    "Padlocks": null,
+    "Specialty Locks": null,
+    "U-Locks": null,
+    "U-Locks with Cables": null,
+    "Wheel Locks": null
+  },
+  "LUBES AND CLEANERS": {
+    "Adhesives": null,
+    "Assembly Compounds": null,
+    "Brake Fluids": null,
+    "Cleaners and Degreasers": {
+      "Bike Cleaner": null,
+      "Bike Polish": null,
+      "Degreaser": null,
+      "Miscellaneous": null,
+      "Riding Equipment": null
+    },
+    "Combo Kits": null,
+    "Cutting Fluids": null,
+    "Greases": null,
+    "Lubricants": null,
+    "POP Display Systems": null,
+    "Spoke Prep": null,
+    "Suspension Oils": null
+  },
+  "PEDALS": {
+    "Mountain Cleats": null,
+    "Mountain Clipless Pedals": null,
+    "Pedal Small Parts": null,
+    "Platform Clipless Combo Pedals": null,
+    "Platform Pedals": null,
+    "Platform Pedals with Toe Clips": null,
+    "Road Cleats": null,
+    "Road Clipless Pedals": null,
+    "Toe Clips and Straps": null
+  },
+  "SHIFTERS": {
+    "Bar End Shifters": null,
+    "Drop Bar Shifters": null,
+    "Flat Bar Shifters": null,
+    "Shifter Small Parts": null
+  },
+  "TUBES": {
+    "Downhill Freeride Tubes": {
+      "26'' DH Tubes": null,
+      "27.5'' DH Tubes": null
+    },
+    "Puncture Resistant Tubes": {
+      "12'' Punture Resistant Tubes": null,
+      "16'' Punture Resistant Tubes": null,
+      "20'' Punture Resistant Tubes": null,
+      "24'' Punture Resistant Tubes": null,
+      "26'' Punture Resistant Tubes": null,
+      "27'' Punture Resistant Tubes": null,
+      "27.5'' Punture Resistant Tubes": null,
+      "29'' Punture Resistant Tubes": null,
+      "700c Punture Resistant Tubes": null
+    },
+    "Self-Sealing Tubes": {
+      "16'' Self-Sealing Tubes": null,
+      "20'' Self-Sealing Tubes": null,
+      "24'' Self-Sealing Tubes": null,
+      "26'' Self-Sealing Tubes": null,
+      "27.5'' Self-Sealing Tubes": null,
+      "29'' Self-Sealing Tubes": null,
+      "700c Self-Sealing Tubes": null
+    },
+    "Solid Tubes": {
+      "16'' Solid Tubes": null,
+      "20'' Solid Tubes": null,
+      "24'' Solid Tubes": null,
+      "26'' Solid Tubes": null,
+      "700c Solid Tubes": null
+    },
+    "Standard SV and PV Tubes": {
+      "12'' Standard Tubes": null,
+      "14'' Standard Tubes": null,
+      "16'' Standard Tubes": null,
+      "18'' Standard Tubes": null,
+      "20'' Standard Tubes": null,
+      "24'' Standard Tubes": null,
+      "26'' Standard Tubes": null,
+      "27'' Standard Tubes": null,
+      "27.5'' Standard Tubes": null,
+      "29'' Standard Tubes": null,
+      "700c Standard Tubes": null
+    },
+    "Ultralite Tubes": {
+      "26'' Ultralite Tubes": null
+    }
+  },
+  "WHEELS": {
+    "12in Wheels": null,
+    "16in Wheels": null,
+    "18in Wheels": null,
+    "20in Wheels": {
+      "20in BMX Wheels": null,
+      "20in Juvenile Wheels": null
+    },
+    "24in Wheels": {
+      "24'' Juvenile Wheels": null
+    },
+    "26in Wheels": {
+      "26 1 3/8'' Wheels": null,
+      "26'' BMX Disc Wheels": null,
+      "26'' Cruiser and Comfort Wheels": null,
+      "26'' Disc MTB Wheels": null,
+      "26'' MTB Wheels": null
+    },
+    "27.5in Wheels": {
+      "27.5'' Disc MTB Wheels": null,
+      "27.5'' MTB Wheels": null
+    },
+    "27.5in/29 in Disc Wheels": null,
+    "27in Wheels": {
+      "27 1 1/4'' Wheels": null,
+      "27 1 1/8'' Wheels": null
+    },
+    "29in Wheels": {
+      "29'' Disc MTB Wheels": null
+    },
+    "700c Wheels": {
+      "700c Fixie Wheels": null,
+      "700c Hybrid and Comfort Wheels": null,
+      "700c Road and Gravel Wheels": null,
+      "700c Road Wheels": null
+    }
+  }
+}

@@ -4,7 +4,6 @@ const config = require('../config.js');
 
 class KhsProduct {
 
-
     // KHS redirects any request to the homepage if cookies are not present
     // it appears cookies usually expire 2 hours after generations
     // even the presence of expired cookies will be accepted and avoid a redirect
@@ -88,8 +87,9 @@ class KhsProduct {
      * @returns Object conforming to Item Mongoose model
      */
     static async validateItem(product) {
-
         try {
+            let specMap = new Map();
+            product.AdditionProductSpectList.map(object => specMap.set(object.SpectName, object.SpectValue));
             const itemJSON = {
                 name: product.Title + (
                     !Array.isArray(product.TitleSupportList) ? "" :
@@ -98,15 +98,14 @@ class KhsProduct {
                             .join("")
                 ),
                 upc: product.UPC_No,
-                category: product.NavCategory,
+                category_1: product.NavCategory,
+                category_2: product.NaviSubSubCat,
+                category_3: product.PrimaryNanoGroupDesc,
                 brand: product.SubCategory,
-                size: product.TitleSupportList
-                    .map(spect => spect.SpectValue)
-                    .filter(attr => attr)
-                    .join("/"),
+                specifications: specMap,
+                features: product.AdditionProductInfoList,
                 wholesale_cost: product.Unit_Price,
                 standard_price: product.MSRP || product.MAPPrice || product.Unit_Price * 1.5,
-                desired_stock: 0
             }
 
             await Item.validate(itemJSON);
