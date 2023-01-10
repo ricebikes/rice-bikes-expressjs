@@ -87,7 +87,6 @@ class KhsProduct {
      * @returns Object conforming to Item Mongoose model
      */
     static async validateItem(product) {
-
         try {
             let specMap = new Map();
             product.AdditionProductSpectList.map(object => specMap.set(object.SpectName, object.SpectValue));
@@ -100,8 +99,8 @@ class KhsProduct {
                 ),
                 upc: product.UPC_No,
                 category_1: product.NavCategory,
-                category_2: product.SecondaryNanoGroupDesc,
-                category_3: product.NaviSubSubCat,
+                category_2: product.NaviSubSubCat,
+                category_3: product.PrimaryNanoGroupDesc,
                 brand: product.SubCategory,
                 specifications: specMap,
                 features: product.AdditionProductInfoList,

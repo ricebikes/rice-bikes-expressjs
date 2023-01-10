@@ -36,16 +36,16 @@ router.get('/brands', function (req, res) {
  * /search accepts the following parameters:
  *  name: the name of the item.
  *  brand: item brand
- *  category: Item category
- *  size: Item size
+ *  category_1,_2,_3: Item category
  *  upc: Item Universal Product Code (used items will lack one)
  */
 router.get('/search', function (req, res) {
     // add all basic query parameters into object
     let query_object = {
         brand: req.query.brand,
-        size: req.query.size,
-        category: req.query.category,
+        category_1: req.query.category_1,
+        category_2: req.query.category_2,
+        category_3: req.query.category_3,
         upc: req.query.upc,
     };
     // if our query defines a name, add that here. Required since the name portion uses indexed searching (for speed)
@@ -120,7 +120,7 @@ router.put('/upc/:upc', async function (req, res) {
 })
 
 // everything below here is only for admins, so use the admin middleware to block it
-// router.use(adminMiddleware);
+router.use(adminMiddleware);
 
 /**
  * POST: /
