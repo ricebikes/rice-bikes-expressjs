@@ -32,7 +32,10 @@ router.post("/", async (req, res) => {
       if (req.body.customer._id) {
         // Find the customer we are told exists.
         customer = await Customer.findById(req.body.customer._id);
-        if (!customer) return res.status(404).json({ err: "Customer not found", status: 404 });
+        if (!customer)
+          return res
+            .status(404)
+            .json({ err: "Customer not found", status: 404 });
       } else {
         // Create a new customer.
         customer = await Customer.create({
@@ -43,10 +46,10 @@ router.post("/", async (req, res) => {
       }
       // See if the customer is an employee, and apply discount if so
       // Only search for active employees
-      const users = await User.find({active: true});
+      const users = await User.find({ active: true });
       let employee = false;
       // do not apply employee pricing to retrospec transaction
-      if (req.body.transaction_type != 'retrospec'){
+      if (req.body.transaction_type != "retrospec") {
         for (user of users) {
           if (user.username === customer.email.replace("@rice.edu", "")) {
             // Go by username to find employee.
@@ -89,26 +92,35 @@ router.get("/", async (req, res) => {
   try {
     let query = req.query;
     for (let [key, value] of Object.entries(query)) {
-      query[key] = JSON.parse(value)
+      query[key] = JSON.parse(value);
     }
     // If query requests all transactions waiting on parts, modify it to search for transactions with one or more order requests
     if (query.waiting_part) {
       delete query.waiting_part;
-      query['orderRequests.0'] = { '$exists': true }
+      query["orderRequests.0"] = { $exists: true };
     }
     /**
      * Note: we deliberately tell mongoose not to return all fields when running this query.
      * We don't want to send a large amount of data to the frontend when getting a lot of transactions.
      */
-    let transactions = await Transaction.find(query)
-      .select({
-        items: 0, actions: 0, repairs: 0, description: 0,
-        employee: 0, complete: 0, is_paid: 0, refurb: 0, paymentType: 0
-      });
+    let transactions = await Transaction.find(query).select({
+      items: 0,
+      actions: 0,
+      repairs: 0,
+      description: 0,
+      employee: 0,
+      complete: 0,
+      is_paid: 0,
+      refurb: 0,
+      paymentType: 0,
+    });
     // Sort transactions here
     transactions = transactions.sort((b, a) => {
       if ((a.urgent && b.urgent) || (!a.urgent && !b.urgent)) {
-        return new Date(b.date_created).getTime() - new Date(a.date_created).getTime();
+        return (
+          new Date(b.date_created).getTime() -
+          new Date(a.date_created).getTime()
+        );
       } else if (a.urgent) {
         return 1;
       } else if (b.urgent) {
@@ -159,7 +171,10 @@ router.get("/searchByDate/:dates", function (req, res) {
     date_completed: queryParams,
   }).exec(function (err, transactions) {
     if (err) return res.status(500);
-    if (!transactions) return res.status(404).json({ err: "No transactions found.", status: 404 });
+    if (!transactions)
+      return res
+        .status(404)
+        .json({ err: "No transactions found.", status: 404 });
     res.status(200).json(transaction);
   });
 });
@@ -213,16 +228,22 @@ async function calculateTax(transaction) {
       // apply tax to the transaction
       // remove old tax item
       transaction.items = transaction.items.filter(function (candidate) {
-        if (candidate.item.name === config.tax.DBname) {
+        if (candidate.item?.name && candidate.item.name === config.tax.DBname) {
           // remove this item, and drop the cost to remove current tax
           transaction.total_cost -= candidate.price;
           transaction.total_cost = truncate2(transaction.total_cost);
           return false;
-        } else if (candidate.price < 0) { // don't include discounts in tax
+        } else if (candidate.price < 0) {
+          // don't include discounts in tax
           discount += candidate.price;
           return true;
-        } else return true; // not the tax item, keep it
+        } else {
+          console.log(30);
+          return true; // not the tax item, keep it
+          
+        }
       });
+      console.log(1);
       const tax_item = await Item.findOne({ name: config.tax.DBname });
       let calculated_tax = {
         item: tax_item,
@@ -232,7 +253,7 @@ async function calculateTax(transaction) {
       if (calculated_tax.price > Number.EPSILON) {
         // Tax is nonzero, add a tax item
         transaction.items.push(calculated_tax);
-        
+
         transaction.total_cost = truncate2(
           transaction.total_cost + calculated_tax.price
         );
@@ -262,14 +283,20 @@ router.get("/search", async function (req, res) {
       query["bikes"] = { $in: req.query.bikes.split(",") };
     }
     let results = await Transaction.find(query).select({
-      items: 0, actions: 0, repairs: 0,
-      employee: 0, complete: 0, is_paid: 0, refurb: 0, paymentType: 0
+      items: 0,
+      actions: 0,
+      repairs: 0,
+      employee: 0,
+      complete: 0,
+      is_paid: 0,
+      refurb: 0,
+      paymentType: 0,
     });
     if (req.query.description) {
-      results = results.filter(x => {
+      results = results.filter((x) => {
         // Use search helper for description string
         return search(x.description, req.query.description);
-      })
+      });
     }
     return res.status(200).json(results);
   } catch (err) {
@@ -316,12 +343,14 @@ Functions to update transactions. Split up to allow tracking user actions.
 router.put("/:id/description", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).json({ err: "No transaction found", status: 404 });
+    if (!transaction)
+      return res.status(404).json({ err: "No transaction found", status: 404 });
     if (!req.headers["user-id"])
       return res.status(400).json({ err: "No user id provided", status: 400 });
     const user_id = req.headers["user-id"];
     const user = await User.findById(user_id);
-    if (!user) return res.status(404).json({ err: "No user found", status: 404 });
+    if (!user)
+      return res.status(404).json({ err: "No user found", status: 404 });
     transaction.description =
       req.body.description + "- " + user.firstname + " " + user.lastname;
     const loggedTransaction = await addLogToTransaction(
@@ -351,7 +380,12 @@ router.put("/:id/complete", async (req, res) => {
       transaction.date_completed = Date.now();
     }
     if (transaction.orderRequests.length > 0) {
-      return res.status(403).json({ err: "Cannot complete transaction with waiting order requests", status: 403 });
+      return res
+        .status(403)
+        .json({
+          err: "Cannot complete transaction with waiting order requests",
+          status: 403,
+        });
     }
     // Update item inventory
     for (let item of transaction.items) {
@@ -408,14 +442,15 @@ router.put("/:id/complete", async (req, res) => {
  * Requires user's ID in header
  * @param is_paid - if the transaction is being marked as paid or not
  */
-router.put('/:id/mark_paid', async (req,res) => {
+router.put("/:id/mark_paid", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
     // Check to make sure transaction has been completed
-    if (!transaction.complete) return res.status(400).send("Cannot checkout an incomplete transaction");
+    if (!transaction.complete)
+      return res.status(400).send("Cannot checkout an incomplete transaction");
     if (req.body.is_paid && !transaction.is_paid) {
       // Send receipt email
-      let mailer = await getMailer()
+      let mailer = await getMailer();
       await mailer.send({
         message: {
           to: transaction.customer.email,
@@ -425,7 +460,7 @@ router.put('/:id/mark_paid', async (req,res) => {
         locals: {
           transaction: transaction,
           date: moment().format("MMMM Do YYYY, h:mm:ss a"),
-        }
+        },
       });
     }
     transaction.is_paid = req.body.is_paid;
@@ -459,7 +494,10 @@ router.put("/:id/update_repair", async (req, res) => {
     if (transaction.repairs.length === 0)
       return res
         .status(404)
-        .json({ err: "No repairs associated with this transaction", status: 404 });
+        .json({
+          err: "No repairs associated with this transaction",
+          status: 404,
+        });
     transaction.repairs.forEach(async function (current_repair, idx) {
       // iterate to find the repair that is completed
       if (current_repair._id.toString() === req.body._id) {
@@ -486,59 +524,57 @@ router.put("/:id/update_repair", async (req, res) => {
  * @param beerbike - if transaction is a beer bike or not
  */
 router.put("/:id/beerbike", async (req, res) => {
-    try {
-        let transaction = await Transaction.findById(req.params.id);
-        if (!transaction) return res.status(404).json();
+  try {
+    let transaction = await Transaction.findById(req.params.id);
+    if (!transaction) return res.status(404).json();
 
-        transaction.beerbike = req.body.beerbike;
+    transaction.beerbike = req.body.beerbike;
 
-        let description = req.body.beerbike
-            ? "Marked as Beer Bike"
-            : "Unmarked as Beer Bike";
-        const loggedTransaction = await addLogToTransaction(
-            transaction,
-            req,
-            description
-        );
+    let description = req.body.beerbike
+      ? "Marked as Beer Bike"
+      : "Unmarked as Beer Bike";
+    const loggedTransaction = await addLogToTransaction(
+      transaction,
+      req,
+      description
+    );
 
-        const savedTransaction = await loggedTransaction.save();
-        return res.status(200).json(savedTransaction);
-    } catch (err) {
-        return res.status(500).json(err);
-    }
+    const savedTransaction = await loggedTransaction.save();
+    return res.status(200).json(savedTransaction);
+  } catch (err) {
+    return res.status(500).json(err);
+  }
 });
-
 
 /**
  * Update the status of a transaction
  * Only used on retrospec transactions
  */
-router.put("/:id/status", putStatus)
-
+router.put("/:id/status", putStatus);
 
 async function putStatus(req, res) {
   try {
-    let transaction = await Transaction.findById(req.params.id)
-    if (!transaction) return res.status(404).json()
+    let transaction = await Transaction.findById(req.params.id);
+    if (!transaction) return res.status(404).json();
 
     transaction.status = req.body.status;
 
     // enqueue transaction at time of building status set
-    if (transaction.status == 'building') {
-      transaction.date_created = Date.now()
+    if (transaction.status == "building") {
+      transaction.date_created = Date.now();
     }
 
-    let description = `Updated status to ${req.body.status}`
+    let description = `Updated status to ${req.body.status}`;
     const loggedTransaction = await addLogToTransaction(
       transaction,
       req,
       description
-    )
+    );
 
     const savedTransaction = await loggedTransaction.save();
     return res.status(200).json(savedTransaction);
   } catch (err) {
-    return res.status(500).json(err)
+    return res.status(500).json(err);
   }
 }
 
@@ -547,12 +583,12 @@ async function putStatus(req, res) {
  * Only intended to be used for retrospec transactions
  */
 router.put("/:id/customer", async (req, res) => {
-  try{
+  try {
     // find transaction
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404).json();
 
-    if (!req.body.customer){
+    if (!req.body.customer) {
       res.status(400).json({ err: "No customer specified", status: 400 });
     }
 
@@ -560,7 +596,8 @@ router.put("/:id/customer", async (req, res) => {
     if (req.body.customer._id) {
       // Find the customer we are told exists.
       customer = await Customer.findById(req.body.customer._id);
-      if (!customer) return res.status(404).json({ err: "Customer not found", status: 404 });
+      if (!customer)
+        return res.status(404).json({ err: "Customer not found", status: 404 });
     } else {
       // Create a new customer.
       customer = await Customer.create({
@@ -571,12 +608,12 @@ router.put("/:id/customer", async (req, res) => {
     }
 
     // See if the customer is a head mechanic, and update reserved if appropriate
-    const users = await User.find({roles: "head_mechanic"});
+    const users = await User.find({ roles: "head_mechanic" });
     let head_mechanic = false;
     for (user of users) {
       if (user.username === customer.email.replace("@rice.edu", "")) {
         // Go by username to find employee.
-        head_mechanic = true
+        head_mechanic = true;
         break;
       }
     }
@@ -591,12 +628,11 @@ router.put("/:id/customer", async (req, res) => {
     );
     const savedTransaction = await loggedTransaction.save();
     res.status(200).json(savedTransaction);
-
   } catch (err) {
-    console.log(err)
-    res.status(500).json(err)
+    console.log(err);
+    res.status(500).json(err);
   }
-})
+});
 
 /**
     Updates a single transaction - "PUT /transactions/:id"
@@ -626,11 +662,16 @@ Deletes a single transaction - "DELETE /transactions/:id"
 router.delete("/:id", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).json({ err: "No transaction found.", status: 404 });
+    if (!transaction)
+      return res
+        .status(404)
+        .json({ err: "No transaction found.", status: 404 });
     // Update order requests that reference this transaction.
     for (let request of transaction.orderRequests) {
       const requestRef = await OrderRequest.findById(request._id);
-      requestRef.transactions = requestRef.transactions.filter(x => x != transaction._id);
+      requestRef.transactions = requestRef.transactions.filter(
+        (x) => x != transaction._id
+      );
       await requestRef.save();
     }
     await transaction.remove();
@@ -647,11 +688,15 @@ router.post("/:id/bikes", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404).json();
-    if (transaction.bikes.length > 0) return res.status(400).json({ err: "Only one bike allowed per transaction" });
+    if (transaction.bikes.length > 0)
+      return res
+        .status(400)
+        .json({ err: "Only one bike allowed per transaction" });
     let bike;
     if (req.body._id) {
       bike = await Bike.findById(req.body.id);
-      if (!bike) return res.status(404).json({ err: "No bike found", status: 404 });
+      if (!bike)
+        return res.status(404).json({ err: "No bike found", status: 404 });
     } else {
       bike = await Bike.create({
         make: req.body.make,
@@ -694,21 +739,8 @@ router.delete("/:id/bikes/:bike_id", async (req, res) => {
  * @param {Number} custom_price: custom price for item
  */
 async function addItemToTransaction(transaction, item, custom_price = 0) {
-  let newItem;
-  // Check to see if a custom price was given
-  if (item.condition == 'Used' && custom_price != 0) {
-    let price = custom_price;
-    if (typeof price != 'number') {
-      // Parse price
-      price = parseFloat(price);
-    }
-    newItem = {
-      item: item,
-      price: price
-    };
-  }
   // Check if "customer" is employee
-  else if (transaction.employee && item.wholesale_cost > 0) {
+  if (transaction.employee && item.wholesale_cost > 0) {
     // Apply employee pricing for this item.
     newItem = {
       item: item,
@@ -736,11 +768,17 @@ async function addItemToTransaction(transaction, item, custom_price = 0) {
 router.post("/:id/items", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).json({ err: "No Transaction found", status: 404 });
+    if (!transaction)
+      return res.status(404).json({ err: "No Transaction found", status: 404 });
     const item = await Item.findById(req.body._id);
-    if (!item) return res.status(404).json({ err: "No item found", status: 404 });
+    if (!item)
+      return res.status(404).json({ err: "No item found", status: 404 });
     // Add the item to the transaction
-    const taxedTransaction = await addItemToTransaction(transaction, item, req.body.custom_price);
+    const taxedTransaction = await addItemToTransaction(
+      transaction,
+      item,
+      req.body.custom_price
+    );
     const loggedTransaction = await addLogToTransaction(
       taxedTransaction,
       req,
@@ -765,9 +803,18 @@ router.post("/:id/items", async (req, res) => {
  */
 async function removeItemFromTransaction(transaction, item) {
   // Find index of item to remove
-  let index = transaction.items.findIndex(x => x.item._id.toString() == item._id.toString())
-  if (index == -1) throw { "err": "could not find requested item in transaction's items array to delete", status: 404 };
-  if (transaction.items[index].item.managed) throw { "err": "cannot remove 'managed' item", status: 403 };
+  console.log('help');
+  let index = transaction.items.findIndex(
+    (x) => x.item && x.item._id.toString() == item._id.toString()
+  );
+  console.log('help')
+  if (index == -1)
+    throw {
+      err: "could not find requested item in transaction's items array to delete",
+      status: 404,
+    };
+  if (transaction.items[index].item.managed)
+    throw { err: "cannot remove 'managed' item", status: 403 };
   transaction.total_cost -= transaction.items[index].price;
   transaction.items.splice(index, 1);
   transaction = await transaction.save();
@@ -784,7 +831,8 @@ router.delete("/:id/items/:item_id", async (req, res) => {
     let transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404);
     let item = await Item.findById(req.params.item_id);
-    if (!item) return res.status(404).json({ "err": "could not find item to remove" })
+    if (!item)
+      return res.status(404).json({ err: "could not find item to remove" });
     let action_description = `Deleted item ${item.name}`;
     let taxedTransaction = await removeItemFromTransaction(transaction, item);
     let loggedTransaction = await addLogToTransaction(
@@ -812,8 +860,10 @@ router.delete("/:id/items/:item_id", async (req, res) => {
 router.post("/:id/repairs", async (req, res) => {
   try {
     let transaction = await Transaction.findById(req.params.id);
-    if (!transaction) return res.status(404).json({ err: "No transaction", status: 404 });
-    if (!req.body._id) return res.status(400).json({ err: "No repair to add", status: 400 });
+    if (!transaction)
+      return res.status(404).json({ err: "No transaction", status: 404 });
+    if (!req.body._id)
+      return res.status(400).json({ err: "No repair to add", status: 400 });
     let repair = await Repair.findById(req.body._id);
     if (!repair) return res.status(404);
     let rep = { repair: repair, completed: false };
@@ -878,9 +928,9 @@ router.get("/:id/email-notify", async (req, res) => {
       locals: {
         transaction: transaction,
         first_name: transaction.customer.first_name,
-      }
-    })
-    res.status(200).json({ "status": "OK" });
+      },
+    });
+    res.status(200).json({ status: "OK" });
   } catch (err) {
     res.status(500).json(err);
   }
@@ -890,7 +940,7 @@ router.get("/:id/email-receipt", async (req, res) => {
   try {
     let transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404);
-    let mailer = await getMailer()
+    let mailer = await getMailer();
     await mailer.send({
       message: {
         to: transaction.customer.email,
@@ -900,7 +950,7 @@ router.get("/:id/email-receipt", async (req, res) => {
       locals: {
         transaction: transaction,
         date: moment().format("MMMM Do YYYY, h:mm:ss a"),
-      }
+      },
     });
   } catch (err) {
     res.status(500).json(err);
@@ -913,8 +963,14 @@ router.get("/:id/email-receipt", async (req, res) => {
  * @param {OrderRequest} orderRequest Order request to remove
  */
 async function removeOrderRequestFromTransaction(transaction, orderRequest) {
-  let index = transaction.orderRequests.findIndex(x => x._id.toString() == orderRequest._id.toString());
-  if (index == -1) throw { "err": "No matching order request found to remove from transaction", status: 404 };
+  let index = transaction.orderRequests.findIndex(
+    (x) => x._id.toString() == orderRequest._id.toString()
+  );
+  if (index == -1)
+    throw {
+      err: "No matching order request found to remove from transaction",
+      status: 404,
+    };
   transaction.orderRequests.splice(index, 1);
   let updatedTransaction = await transaction.save();
   return updatedTransaction;
@@ -926,28 +982,39 @@ async function removeOrderRequestFromTransaction(transaction, orderRequest) {
  * @param {OrderRequest} orderRequest Order request to add
  */
 async function addOrderRequestToTransaction(transaction, orderRequest) {
-  if (transaction.complete) throw { "err": "Cannot add order requests to complete transactions", status: 400 };
+  if (transaction.complete)
+    throw {
+      err: "Cannot add order requests to complete transactions",
+      status: 400,
+    };
   if (!transaction.orderRequests) transaction.orderRequests = [];
   transaction.orderRequests.push(orderRequest);
   let updatedTransaction = await transaction.save();
   return updatedTransaction;
 }
 
-
-router.put("/:id/forsale", async (req, res, next) => {
-  const user_id = req.headers["user-id"];
-  if (!user_id) return res.status(400).json({ error: "did not find a user-id header", status: 400 });
-  try {
-    req.body.status = "for sale"
-    const user = await User.findById(user_id);
-    if (user.roles.includes('admin')) return next()
-  } catch (err) {
-    console.log(err)
-    return res.status(500).json(err)
-  }
-  return res.status(403).json({error: "insufficient permissions to mark bike for sale"})
-}, putStatus)
-
+router.put(
+  "/:id/forsale",
+  async (req, res, next) => {
+    const user_id = req.headers["user-id"];
+    if (!user_id)
+      return res
+        .status(400)
+        .json({ error: "did not find a user-id header", status: 400 });
+    try {
+      req.body.status = "for sale";
+      const user = await User.findById(user_id);
+      if (user.roles.includes("admin")) return next();
+    } catch (err) {
+      console.log(err);
+      return res.status(500).json(err);
+    }
+    return res
+      .status(403)
+      .json({ error: "insufficient permissions to mark bike for sale" });
+  },
+  putStatus
+);
 
 module.exports = {
   router: router,
