@@ -387,7 +387,8 @@ router.put("/:id/complete", async (req, res) => {
           status: 403,
         });
     }
-    // Update item inventory
+    // Update item inventory 
+    /* disabling item stock for now
     for (let item of transaction.items) {
       const found_item = await Item.findById(item.item._id);
       if (found_item.managed) continue; // Don't update stock on managed item
@@ -397,7 +398,7 @@ router.put("/:id/complete", async (req, res) => {
         await ItemController.increaseItemStock(found_item._id, 1);
       }
       // send low stock email if needed
-      /*
+      
                 Currently disabling this
               if (found_item.stock <= found_item.warning_stock) {
                 User.find({roles:'operations'},function (err, user_array) {
@@ -415,8 +416,8 @@ router.put("/:id/complete", async (req, res) => {
                   }
                 });
               }
-              */
-    }
+              
+    } */
     const description = req.body.complete
       ? "Completed Transaction"
       : "Reopened Transaction";
