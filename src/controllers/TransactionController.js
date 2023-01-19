@@ -446,17 +446,21 @@ router.put("/:id/complete", async (req, res) => {
 router.put("/:id/mark_paid", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
-    console.log('hi', transaction);
     // Check to make sure transaction has been completed
     if (!transaction.complete) {
-      console.log('1');
       return res.status(400).send("Cannot checkout an incomplete transaction");
     }
-    if (req.body.is_paid && !transaction.is_paid) {
-      console.log('2');
+
+    // temp check for if this transaction contains old items
+    let has_old_item = false;
+    for(i in transaction.items) {
+      if(!transaction.items[i].item) {
+        has_old_item = true;
+      }
+    }
+    if (req.body.is_paid && !transaction.is_paid && !has_old_item) {
       // Send receipt email
       let mailer = await getMailer();
-      console.log('3');
       await mailer.send({
         message: {
           to: transaction.customer.email,
@@ -469,22 +473,17 @@ router.put("/:id/mark_paid", async (req, res) => {
         },
       });
     }
-    console.log('4');
     transaction.is_paid = req.body.is_paid;
-    console.log('5');
     // log this action
     let description = req.body.is_paid
       ? "Marked Transaction paid"
       : "Marked Transaction as waiting";
-    console.log('attempting to add log to transaction');
     const loggedTransaction = await addLogToTransaction(
       transaction,
       req,
       description
     );
-    console.log("logged transaction called");
     const savedTransaction = await loggedTransaction.save();
-    console.log('saved');
     res.status(200).json(savedTransaction);
   } catch (err) {
     res.status(500).json(err);
