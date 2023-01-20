@@ -89,7 +89,7 @@ class KhsProduct {
     static async validateItem(product) {
         try {
             let specMap = new Map();
-            product.AdditionProductSpectList.map(object => specMap.set(object.SpectName.replace(/\./g,' '), object.SpectValue));
+            product.AdditionProductSpectList.map(object => specMap.set(object.SpectName.replace(/\./g,'').replace(/\$/g, ''), object.SpectValue));
             const itemJSON = {
                 name: product.Title + (
                     !Array.isArray(product.TitleSupportList) ? "" :
@@ -112,6 +112,7 @@ class KhsProduct {
             await Item.validate(itemJSON);
             return itemJSON
         } catch (err) {
+            console.log('err', err);
             throw err
         }
     }
