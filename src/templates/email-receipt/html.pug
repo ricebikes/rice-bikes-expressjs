@@ -63,7 +63,10 @@ html
 
                     each item in transaction.items
                         ul
-                            li #{item.item.name} - $#{item.price}
+                            if item.item
+                                li #{item.item.name} - $#{item.price}
+                            else 
+                                li #{item.name_DEPRECATED} - $#{item.price}
                 h4
                     | Repairs
 

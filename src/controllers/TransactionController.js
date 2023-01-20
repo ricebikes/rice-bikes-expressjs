@@ -449,14 +449,7 @@ router.put("/:id/mark_paid", async (req, res) => {
       return res.status(400).send("Cannot checkout an incomplete transaction");
     }
 
-    // temp check for if this transaction contains old items
-    let has_old_item = false;
-    for(i in transaction.items) {
-      if(!transaction.items[i].item) {
-        has_old_item = true;
-      }
-    }
-    if (req.body.is_paid && !transaction.is_paid && !has_old_item) {
+    if (req.body.is_paid && !transaction.is_paid) {
       // Send receipt email
       let mailer = await getMailer();
       await mailer.send({

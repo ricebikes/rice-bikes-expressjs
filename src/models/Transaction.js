@@ -26,7 +26,7 @@ var TransactionSchema = new mongoose.Schema({
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
   bikes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Bike' }],
   repairs: [{ repair: { type: mongoose.Schema.Types.ObjectId, ref: 'Repair' }, completed: Boolean }],
-  items: [{ item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' }, price: Number }],
+  items: [{ item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' }, price: Number, name_DEPRECATED: String }],
   actions: [{
     employee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     description: String,
