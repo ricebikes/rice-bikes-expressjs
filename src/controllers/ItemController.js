@@ -114,7 +114,7 @@ router.put('/upc/:upc', async function (req, res) {
             }
         }
     } catch (err) {
-        console.log("unexpected error");
+        console.log(err);
         res.status(500).json({ERROR: "Unexpected error"})
     }
 

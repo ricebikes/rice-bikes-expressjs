@@ -89,7 +89,7 @@ class KhsProduct {
     static async validateItem(product) {
         try {
             let specMap = new Map();
-            product.AdditionProductSpectList.map(object => specMap.set(object.SpectName, object.SpectValue));
+            product.AdditionProductSpectList.map(object => specMap.set(object.SpectName.replace(/\./g,' '), object.SpectValue));
             const itemJSON = {
                 name: product.Title + (
                     !Array.isArray(product.TitleSupportList) ? "" :
@@ -105,9 +105,10 @@ class KhsProduct {
                 specifications: specMap,
                 features: product.AdditionProductInfoList,
                 wholesale_cost: product.Unit_Price,
-                standard_price: product.MSRP || product.MAPPrice || product.Unit_Price * 1.5,
+                standard_price: Number((product.MSRP || product.MAPPrice || product.Unit_Price * 1.5).toFixed(2)),
             }
 
+            console.log(itemJSON);
             await Item.validate(itemJSON);
             return itemJSON
         } catch (err) {
