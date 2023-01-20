@@ -238,12 +238,10 @@ async function calculateTax(transaction) {
           discount += candidate.price;
           return true;
         } else {
-          console.log(30);
           return true; // not the tax item, keep it
           
         }
       });
-      console.log(1);
       const tax_item = await Item.findOne({ name: config.tax.DBname });
       let calculated_tax = {
         item: tax_item,
@@ -447,9 +445,18 @@ router.put("/:id/mark_paid", async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
     // Check to make sure transaction has been completed
-    if (!transaction.complete)
+    if (!transaction.complete) {
       return res.status(400).send("Cannot checkout an incomplete transaction");
-    if (req.body.is_paid && !transaction.is_paid) {
+    }
+
+    // temp check for if this transaction contains old items
+    let has_old_item = false;
+    for(i in transaction.items) {
+      if(!transaction.items[i].item) {
+        has_old_item = true;
+      }
+    }
+    if (req.body.is_paid && !transaction.is_paid && !has_old_item) {
       // Send receipt email
       let mailer = await getMailer();
       await mailer.send({
@@ -630,7 +637,6 @@ router.put("/:id/customer", async (req, res) => {
     const savedTransaction = await loggedTransaction.save();
     res.status(200).json(savedTransaction);
   } catch (err) {
-    console.log(err);
     res.status(500).json(err);
   }
 });
@@ -800,21 +806,10 @@ router.post("/:id/items", async (req, res) => {
 /**
  *
  * @param {Transaction} transaction Transaction to remove item from
- * @param {Item} item item to remove
+ * @param {Number} index item index to remove
  */
-async function removeItemFromTransaction(transaction, item) {
-  // Find index of item to remove
-  console.log('help');
-  let index = transaction.items.findIndex(
-    (x) => x.item && x.item._id.toString() == item._id.toString()
-  );
-  console.log('help')
-  if (index == -1)
-    throw {
-      err: "could not find requested item in transaction's items array to delete",
-      status: 404,
-    };
-  if (transaction.items[index].item.managed)
+async function removeItemFromTransaction(transaction, index) {
+  if (transaction.items[index].item && transaction.items[index].item.managed)
     throw { err: "cannot remove 'managed' item", status: 403 };
   transaction.total_cost -= transaction.items[index].price;
   transaction.items.splice(index, 1);
@@ -827,15 +822,29 @@ async function removeItemFromTransaction(transaction, item) {
  * Requires user's ID in header
  * Deletes an item from a transaction - DELETE /transactions/$id/items
  */
-router.delete("/:id/items/:item_id", async (req, res) => {
+router.delete("/:id/items/:item_idx", async (req, res) => {
   try {
     let transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404);
-    let item = await Item.findById(req.params.item_id);
-    if (!item)
-      return res.status(404).json({ err: "could not find item to remove" });
-    let action_description = `Deleted item ${item.name}`;
-    let taxedTransaction = await removeItemFromTransaction(transaction, item);
+
+    // find item in transaction and get name of it
+    let item = transaction.items[req.params.item_idx];
+
+    let action_description = 'Deleted item ';
+    if (!item.item) {
+      // old item
+      item = transaction.items[req.params.item_idx];
+      action_description += item._doc.name_DEPRECATED;
+      // invalid request
+    }
+    else {
+      action_description += item.item.name;
+    }
+
+    // remove item from transaction and update sales tax + final price
+    let taxedTransaction = await removeItemFromTransaction(transaction, parseInt(req.params.item_idx));
+
+    // adds action to "past actions"
     let loggedTransaction = await addLogToTransaction(
       taxedTransaction,
       req,
@@ -844,6 +853,7 @@ router.delete("/:id/items/:item_id", async (req, res) => {
     let savedTransaction = await loggedTransaction.save();
     res.status(200).json(savedTransaction);
   } catch (err) {
+    console.log(err);
     if (err.err) {
       let status = 500;
       if (err.status) status = err.status;
