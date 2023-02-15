@@ -141,7 +141,8 @@ router.get("/", async (req, res) => {
     // Waiting on pickup
     else {
       transactions = transactions.sort((b, a) => {
-        return a._id - b._id;
+        return new Date(a.date_completed).getTime() -
+        new Date(b.date_completed).getTime();
       });
     }
 
