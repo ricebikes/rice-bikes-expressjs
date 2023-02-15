@@ -79,10 +79,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-/* get the next UPC */
-router.get("/search/newUPC", async (req, res) => {
-  res.status(200).json("12");
-});
 /*
 Gets all transactions - "GET /transactions"
 
