@@ -94,11 +94,11 @@ router.get("/upc/khs/:upc", async function (req, res) {
  */
 router.get("/upc/newUPC", async (req, res) => {
   let newUPC = company_prefix;
+  let newProductNum;
   try {
     const item = await Item.find({ upc: { $regex: `${company_prefix}[0-9]*` } })
       .sort({ upc: -1 })
       .limit(1);
-    let newProductNum;
     if (item) {
       newProductNum = (parseInt(item[0].upc.substring(6, 11)) + 1).toString();
     }

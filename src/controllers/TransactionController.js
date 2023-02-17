@@ -119,7 +119,14 @@ router.get("/", async (req, res) => {
     // Sort transactions here
 
     // Active, Retrospec, Waiting on email, Refurbs, Beer Bike
-    if (!query.complete) {
+    if (query.all || query.is_paid) {
+      transactions = transactions.sort((a, b) => {
+        return (
+          new Date(a.date_completed).getTime() -
+          new Date(b.date_completed).getTime()
+        );
+      });
+    } else if (!query.complete) {
       transactions = transactions.sort((b, a) => {
         // console.log(b, a);
         if ((a.urgent && b.urgent) || (!a.urgent && !b.urgent)) {
@@ -133,12 +140,12 @@ router.get("/", async (req, res) => {
           return -1;
         }
       });
-    }
-    // Waiting on pickup
-    else {
+    } else {
       transactions = transactions.sort((b, a) => {
-        return new Date(a.date_completed).getTime() -
-        new Date(b.date_completed).getTime();
+        return (
+          new Date(a.date_completed).getTime() -
+          new Date(b.date_completed).getTime()
+        );
       });
     }
 
@@ -891,7 +898,7 @@ router.post("/:id/repairs", async (req, res) => {
       return res.status(400).json({ err: "No repair to add", status: 400 });
     let repair = await Repair.findById(req.body._id);
     if (!repair) return res.status(404);
-    let rep = { repair: repair, completed: false };
+    let rep = { repair: repair, completed: false, price: repair.price };
     transaction.repairs.push(rep);
     transaction.total_cost += repair.price;
     let taxedTransaction = await calculateTax(transaction);
