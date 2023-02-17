@@ -118,17 +118,18 @@ router.get("/", async (req, res) => {
 
     // Sort transactions here
 
-    // Active, Retrospec, Waiting on email, Refurbs, Beer Bike
-    if (query.all || query.is_paid) {
-      transactions = transactions.sort((a, b) => {
+    // Paid & All (TODO: pagination)
+    if (query.is_paid || Object.keys(query).length == 0) {
+      console.log('hi')
+      transactions = transactions.sort((b, a) => {
         return (
-          new Date(a.date_completed).getTime() -
-          new Date(b.date_completed).getTime()
+          new Date(a.date_created).getTime() -
+          new Date(b.date_created).getTime()
         );
       });
+      // Active, Retrospec, Waiting on email, Refurbs, Beer Bike
     } else if (!query.complete) {
       transactions = transactions.sort((b, a) => {
-        // console.log(b, a);
         if ((a.urgent && b.urgent) || (!a.urgent && !b.urgent)) {
           return (
             new Date(b.date_created).getTime() -
@@ -140,7 +141,7 @@ router.get("/", async (req, res) => {
           return -1;
         }
       });
-    } else {
+    } else { // waiting on pickup
       transactions = transactions.sort((b, a) => {
         return (
           new Date(a.date_completed).getTime() -
@@ -148,8 +149,6 @@ router.get("/", async (req, res) => {
         );
       });
     }
-
-    // Paid & all should have pagination
 
     res.status(200).json(transactions);
   } catch (err) {
