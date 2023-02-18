@@ -91,6 +91,7 @@ Bad practice but it works
 router.get("/", async (req, res) => {
   try {
     let query = req.query;
+    console.log("query", query);
     for (let [key, value] of Object.entries(query)) {
       query[key] = JSON.parse(value);
     }
@@ -114,19 +115,41 @@ router.get("/", async (req, res) => {
       refurb: 0,
       paymentType: 0,
     });
+
     // Sort transactions here
-    transactions = transactions.sort((b, a) => {
-      if ((a.urgent && b.urgent) || (!a.urgent && !b.urgent)) {
+
+    // Paid & All (TODO: pagination)
+    if (query.is_paid || Object.keys(query).length == 0) {
+      console.log('hi')
+      transactions = transactions.sort((b, a) => {
         return (
-          new Date(b.date_created).getTime() -
-          new Date(a.date_created).getTime()
+          new Date(a.date_created).getTime() -
+          new Date(b.date_created).getTime()
         );
-      } else if (a.urgent) {
-        return 1;
-      } else if (b.urgent) {
-        return -1;
-      }
-    });
+      });
+      // Active, Retrospec, Waiting on email, Refurbs, Beer Bike
+    } else if (!query.complete) {
+      transactions = transactions.sort((b, a) => {
+        if ((a.urgent && b.urgent) || (!a.urgent && !b.urgent)) {
+          return (
+            new Date(b.date_created).getTime() -
+            new Date(a.date_created).getTime()
+          );
+        } else if (a.urgent) {
+          return 1;
+        } else if (b.urgent) {
+          return -1;
+        }
+      });
+    } else { // waiting on pickup
+      transactions = transactions.sort((b, a) => {
+        return (
+          new Date(a.date_completed).getTime() -
+          new Date(b.date_completed).getTime()
+        );
+      });
+    }
+
     res.status(200).json(transactions);
   } catch (err) {
     res.status(500).json(err);
@@ -239,7 +262,6 @@ async function calculateTax(transaction) {
           return true;
         } else {
           return true; // not the tax item, keep it
-          
         }
       });
       const tax_item = await Item.findOne({ name: config.tax.DBname });
@@ -378,14 +400,12 @@ router.put("/:id/complete", async (req, res) => {
       transaction.date_completed = Date.now();
     }
     if (transaction.orderRequests.length > 0) {
-      return res
-        .status(403)
-        .json({
-          err: "Cannot complete transaction with waiting order requests",
-          status: 403,
-        });
+      return res.status(403).json({
+        err: "Cannot complete transaction with waiting order requests",
+        status: 403,
+      });
     }
-    // Update item inventory 
+    // Update item inventory
     /* disabling item stock for now
     for (let item of transaction.items) {
       const found_item = await Item.findById(item.item._id);
@@ -448,8 +468,14 @@ router.put("/:id/mark_paid", async (req, res) => {
     if (!transaction.complete) {
       return res.status(400).send("Cannot checkout an incomplete transaction");
     }
-
-    if (req.body.is_paid && !transaction.is_paid) {
+    // temp check for if this transaction contains old items
+    let has_old_item = false;
+    for (i in transaction.items) {
+      if (!transaction.items[i].item) {
+        has_old_item = true;
+      }
+    }
+    if (req.body.is_paid && !transaction.is_paid && !has_old_item) {
       // Send receipt email
       let mailer = await getMailer();
       await mailer.send({
@@ -493,12 +519,10 @@ router.put("/:id/update_repair", async (req, res) => {
     if (!transaction) return res.status(404).json();
     // update the transaction's repair
     if (transaction.repairs.length === 0)
-      return res
-        .status(404)
-        .json({
-          err: "No repairs associated with this transaction",
-          status: 404,
-        });
+      return res.status(404).json({
+        err: "No repairs associated with this transaction",
+        status: 404,
+      });
     transaction.repairs.forEach(async function (current_repair, idx) {
       // iterate to find the repair that is completed
       if (current_repair._id.toString() === req.body._id) {
@@ -823,19 +847,21 @@ router.delete("/:id/items/:item_idx", async (req, res) => {
     // find item in transaction and get name of it
     let item = transaction.items[req.params.item_idx];
 
-    let action_description = 'Deleted item ';
+    let action_description = "Deleted item ";
     if (!item.item) {
       // old item
       item = transaction.items[req.params.item_idx];
       action_description += item._doc.name_DEPRECATED;
       // invalid request
-    }
-    else {
+    } else {
       action_description += item.item.name;
     }
 
     // remove item from transaction and update sales tax + final price
-    let taxedTransaction = await removeItemFromTransaction(transaction, parseInt(req.params.item_idx));
+    let taxedTransaction = await removeItemFromTransaction(
+      transaction,
+      parseInt(req.params.item_idx)
+    );
 
     // adds action to "past actions"
     let loggedTransaction = await addLogToTransaction(
@@ -870,7 +896,7 @@ router.post("/:id/repairs", async (req, res) => {
       return res.status(400).json({ err: "No repair to add", status: 400 });
     let repair = await Repair.findById(req.body._id);
     if (!repair) return res.status(404);
-    let rep = { repair: repair, completed: false };
+    let rep = { repair: repair, completed: false, price: repair.price };
     transaction.repairs.push(rep);
     transaction.total_cost += repair.price;
     let taxedTransaction = await calculateTax(transaction);
