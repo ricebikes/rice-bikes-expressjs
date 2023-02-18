@@ -104,7 +104,6 @@ router.get("/upc/newUPC", async (req, res) => {
     }
   } catch {
     // start new
-    console.log("hi");
     newProductNum = "1";
   }
 
@@ -129,7 +128,6 @@ router.get("/upc/newUPC", async (req, res) => {
       10);
   if (checkDigit == 10) checkDigit = 0;
   newUPC += checkDigit;
-  console.log(newUPC);
 
   res.status(200).json(newUPC);
 });
@@ -208,8 +206,7 @@ router.post("/", function (req, res) {
       category_1 &&
       brand &&
       standard_price != undefined &&
-      wholesale_cost != undefined &&
-      in_stock != undefined
+      wholesale_cost != undefined
     )
   ) {
     return res
@@ -230,7 +227,6 @@ router.post("/", function (req, res) {
     in_stock: in_stock,
   };
   if (is_khs) newItem.last_updated = new Date();
-  console.log(newItem);
   Item.create(newItem, function (err, item) {
     if (err) return res.status(500).json(err);
     res.status(200).json(item);
