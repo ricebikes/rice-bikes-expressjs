@@ -374,6 +374,34 @@
     "Flat Bar Shifters": null,
     "Shifter Small Parts": null
   },
+  "TIRES": {
+    "Clincher Tires": {
+      "12 Inch": null,
+      "14 Inch": null,
+      "16 Inch": null,
+      "18 Inch": null,
+      "20 Inch": null,
+      "24 Inch": null,
+      "26 Inch": null,
+      "27 Inch": null,
+      "27.5 Inch": null,
+      "29 Inch": null,
+      "650b": null,
+      "700c": null
+    },
+    "Studded Tires": {
+      "26 Inch": null,
+      "27.5 Inch": null,
+      "29 Inch": null,
+      "700c": null
+    },
+    "Tubular Tires": {
+      "700c": null
+    },
+    "Wheelchair Tires": {
+      "24 Inch": null
+    }
+  },
   "TUBES": {
     "Downhill Freeride Tubes": {
       "26'' DH Tubes": null,
