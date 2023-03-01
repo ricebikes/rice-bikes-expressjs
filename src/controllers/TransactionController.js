@@ -468,7 +468,6 @@ router.put("/:id/mark_paid", async (req, res) => {
     if (!transaction.complete) {
       return res.status(400).send("Cannot checkout an incomplete transaction");
     }
-
     // temp check for if this transaction contains old items
     let has_old_item = false;
     for (i in transaction.items) {
