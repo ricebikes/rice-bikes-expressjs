@@ -238,12 +238,26 @@ router.post("/", function (req, res) {
  * Lets an item be updated. Simply overwrites the current item with whatever is sent.
  */
 router.put("/:id", function (req, res) {
-  const { name, category, standard_price, wholesale_cost } = req.body;
+  const {
+    name,
+    upc,
+    category_1,
+    category_2,
+    category_3,
+    brand,
+    standard_price,
+    wholesale_cost,
+    specifications,
+    features,
+    in_stock,
+  } = req.body;
   // validate the request before proceeding. Be less aggressive than we are when validating new items.
   if (
     !(
+      upc &&
       name &&
-      category != undefined &&
+      category_1 &&
+      brand &&
       standard_price != undefined &&
       wholesale_cost != undefined
     )
