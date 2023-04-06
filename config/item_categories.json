@@ -1,4 +1,11 @@
 {
+  "RICE BIKES": {
+    "Merchandise": null,
+    "Bikes": {
+      "Refurbished Bikes": null,
+      "Retrospec Bikes": null
+    }
+  },
   "APPAREL": {
     "Belts": null,
     "Bracelets": null,
@@ -67,14 +74,6 @@
       "Square Bottom Brackets": null,
       "T47 Bottom Brackets": null
     }
-  },
-  "DERAILLEURS": {
-    "Adapters": null,
-    "Covers": null,
-    "Front Derailleurs": null,
-    "Hangers": null,
-    "Pulleys": null,
-    "Rear Derailleurs": null
   },
   "BRAKE LEVERS": {
     "Aero and TT Levers": null,
@@ -196,6 +195,14 @@
     "Tandem Cranks": null,
     "Track Cranks": null
   },
+  "DERAILLEURS": {
+    "Adapters": null,
+    "Covers": null,
+    "Front Derailleurs": null,
+    "Hangers": null,
+    "Pulleys": null,
+    "Rear Derailleurs": null
+  },
   "eBIKE PRODUCTS": {
     "e-Cables": null,
     "e-Diagnostics": null,
@@ -249,6 +256,9 @@
     "Caps, Star Nuts and Compressors": null,
     "Headset Small Parts": null,
     "Headset Spacers": null,
+    "Int-Ext Combo Headsets": {
+      "Internal External Headset Combo": null
+    },
     "Integrated Headsets": {
       "1 1/4 in Integrated Lower": null,
       "1 1/8 in Integrated Complete": null,
@@ -260,9 +270,6 @@
       "Integrated Lower Conversion": null,
       "Tapered Integrated Complete": null,
       "Tapered Integrated Lower": null
-    },
-    "Int-Ext Combo Headsets": {
-      "Internal External Headset Combo": null
     },
     "Semi Integrated Headsets": {
       "1 1/8 in Semi Int Complete": null,
@@ -357,7 +364,6 @@
     "Spoke Prep": null,
     "Suspension Oils": null
   },
-  "MISCELLANEOUS": null,
   "PEDALS": {
     "Mountain Cleats": null,
     "Mountain Clipless Pedals": null,
