@@ -1,4 +1,11 @@
 {
+  "RICE BIKES": {
+    "Merchandise": null,
+    "Bikes": {
+      "Refurbished Bikes": null,
+      "Retrospec Bikes": null
+    }
+  },
   "APPAREL": {
     "Belts": null,
     "Bracelets": null,
@@ -67,14 +74,6 @@
       "Square Bottom Brackets": null,
       "T47 Bottom Brackets": null
     }
-  },
-  "DERAILLEURS": {
-    "Adapters": null,
-    "Covers": null,
-    "Front Derailleurs": null,
-    "Hangers": null,
-    "Pulleys": null,
-    "Rear Derailleurs": null
   },
   "BRAKE LEVERS": {
     "Aero and TT Levers": null,
@@ -151,7 +150,7 @@
     "Cassette Accessories": null,
     "Cogs": null
   },
-  "CHAINGAURDS AND GUIDES": {
+  "CHAINGUARDS AND GUIDES": {
     "Chain Guards": null,
     "Chain Guide - Guard Small Parts": null,
     "Chain Guide Tensioners": null,
@@ -195,6 +194,14 @@
     "Road Cranks": null,
     "Tandem Cranks": null,
     "Track Cranks": null
+  },
+  "DERAILLEURS": {
+    "Adapters": null,
+    "Covers": null,
+    "Front Derailleurs": null,
+    "Hangers": null,
+    "Pulleys": null,
+    "Rear Derailleurs": null
   },
   "eBIKE PRODUCTS": {
     "e-Cables": null,
@@ -249,6 +256,9 @@
     "Caps, Star Nuts and Compressors": null,
     "Headset Small Parts": null,
     "Headset Spacers": null,
+    "Int-Ext Combo Headsets": {
+      "Internal External Headset Combo": null
+    },
     "Integrated Headsets": {
       "1 1/4 in Integrated Lower": null,
       "1 1/8 in Integrated Complete": null,
@@ -260,9 +270,6 @@
       "Integrated Lower Conversion": null,
       "Tapered Integrated Complete": null,
       "Tapered Integrated Lower": null
-    },
-    "Int-Ext Combo Headsets": {
-      "Internal External Headset Combo": null
     },
     "Semi Integrated Headsets": {
       "1 1/8 in Semi Int Complete": null,
@@ -373,6 +380,34 @@
     "Drop Bar Shifters": null,
     "Flat Bar Shifters": null,
     "Shifter Small Parts": null
+  },
+  "TIRES": {
+    "Clincher Tires": {
+      "12 Inch": null,
+      "14 Inch": null,
+      "16 Inch": null,
+      "18 Inch": null,
+      "20 Inch": null,
+      "24 Inch": null,
+      "26 Inch": null,
+      "27 Inch": null,
+      "27.5 Inch": null,
+      "29 Inch": null,
+      "650b": null,
+      "700c": null
+    },
+    "Studded Tires": {
+      "26 Inch": null,
+      "27.5 Inch": null,
+      "29 Inch": null,
+      "700c": null
+    },
+    "Tubular Tires": {
+      "700c": null
+    },
+    "Wheelchair Tires": {
+      "24 Inch": null
+    }
   },
   "TUBES": {
     "Downhill Freeride Tubes": {

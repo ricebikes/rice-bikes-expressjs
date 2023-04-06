@@ -26,7 +26,7 @@ router.get('/transactions/bike_count', async (req, res) => {
             refurb: false, 
             is_paid: false, 
             $or: [
-                {transaction_type : 'inpatient' },
+                {transaction_type : 'inpatient', employee: false },
                 {transaction_type : 'retrospec', status : { $in: ['building', 'built', 'for sale']} },
             ]
         });
