@@ -42,9 +42,11 @@ router.post("/", async (req, res) => {
           first_name: req.body.customer.first_name,
           last_name: req.body.customer.last_name,
           email: req.body.customer.email,
-          phone: req.body.customer.phone,
         });
       }
+      customer.phone = req.body.customer.phone;
+      await customer.save();
+
       // See if the customer is an employee, and apply discount if so
       // Only search for active employees
       const users = await User.find({ active: true });
@@ -630,9 +632,9 @@ router.put("/:id/customer", async (req, res) => {
         first_name: req.body.customer.first_name,
         last_name: req.body.customer.last_name,
         email: req.body.customer.email,
-        phone: req.body.customer.phone,
       });
     }
+    customer.phone = req.body.customer.phone;
 
     // See if the customer is a head mechanic, and update reserved if appropriate
     const users = await User.find({ roles: "head_mechanic" });
