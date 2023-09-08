@@ -42,6 +42,7 @@ router.post("/", async (req, res) => {
           first_name: req.body.customer.first_name,
           last_name: req.body.customer.last_name,
           email: req.body.customer.email,
+          phone: req.body.customer.phone,
         });
       }
       // See if the customer is an employee, and apply discount if so
@@ -629,6 +630,7 @@ router.put("/:id/customer", async (req, res) => {
         first_name: req.body.customer.first_name,
         last_name: req.body.customer.last_name,
         email: req.body.customer.email,
+        phone: req.body.customer.phone,
       });
     }
 

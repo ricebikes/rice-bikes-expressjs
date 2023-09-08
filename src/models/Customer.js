@@ -3,7 +3,8 @@ var mongoose = require('mongoose');
 var CustomerSchema = new mongoose.Schema({
   first_name: String,
   last_name: String,
-  email: String
+  email: String,
+  phone: String,
 });
 
 CustomerSchema.index({'$**': 'text'});
