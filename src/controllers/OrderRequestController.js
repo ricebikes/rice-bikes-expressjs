@@ -310,6 +310,23 @@ router.put("/:id/quantity", async (req, res) => {
 });
 
 /**
+ * PUT: /:id/status - update request's status to complete
+ */
+router.put('/:id/status', async (req, res) => {
+    console.log("hi", req.body);
+    try {
+        if(!req.body.status) return res.status(400).json({erro: "No status specified", status: 400});
+        const orderRequest = await OrderRequest.findById(req.params.id);
+        if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
+        const updated = await setRequestStatus(orderRequest, req.body.status);
+        const complete = await updated.save();
+        return res.status(200).json(complete);
+    } catch(err) {
+        return res.status(500).json(err);
+    }
+});
+
+/**
  * POST /:id/transaction - add a transaction to an order request.
  * Transaction IDs can be added multiple times to one order request 
  * (symbolizes the transaction needing multiple of requested item)
@@ -538,7 +555,10 @@ async function unfulfillTransactionsOrderRequest(requestRef, transactions) {
  * @param {string} status Status value to set for order request
  */
 async function setRequestStatus(orderRequest, status) {
-    if (orderRequest.status != 'Completed' && status == 'Completed') {
+    console.log("set request status", orderRequest.status, status);
+    //if (orderRequest.status != 'Completed' && status === 'Completed') {
+    if(true) {
+        console.log("!")
         /**
          * Need to update stock of attached item, as well as add the item to
          * any transactions waiting for it to arrive
@@ -564,6 +584,7 @@ async function setRequestStatus(orderRequest, status) {
     } else {
         orderRequest.status = status;
     }
+    console.log("ORDER", orderRequest);
     return orderRequest;
 }
 

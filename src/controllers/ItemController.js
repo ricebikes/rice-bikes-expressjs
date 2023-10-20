@@ -289,88 +289,88 @@ router.get("/", function (req, res) {
   });
 });
 
-// /**
-//  * Adds an item to the active order requests by creating a new order request for it, or if an active
-//  * order request exists increments the quantity.
-//  * @param {Item} item Item schema to add order request for (or update an existing one)
-//  */
-// async function createOrUpdateOrderRequest(item) {
-//     // First, check if there is an existing incomplete order request
-//     let order_request = await OrderRequest.findOne({ itemRef: item._id, status: { $in: ['Not Ordered', 'In Cart'] } });
-//     if (!order_request) {
-//         // Assume that no active order request exists, create one.
-//         order_request = await OrderRequest.create({
-//             itemRef: item,
-//             request: item.name,
-//             quantity: item.desired_stock - item.stock,
-//             transactions: [],
-//             partNumber: '',
-//             notes: 'Automatically Created',
-//             actions: []
-//         });
-//     } else {
-//         const regex = /[Aa]utomatically ([Cc]reated|[Uu]pdated)/;
-//         // Update the request's desired quantity.
-//         if (order_request.quantity < item.desired_stock - item.stock) {
-//             if (order_request.orderRef) {
-//                 // Update price of the order
-//                 let order = await Order.findById(order_request.orderRef);
-//                 let newPrice = order.total_price + order_request.itemRef.wholesale_cost * ((item.desired_stock - item.stock) - order_request.quantity);
-//                 order.total_price = newPrice;
-//                 await order.save();
-//             }
-//             order_request.quantity = item.desired_stock - item.stock;
-//         }
-//         if (!regex.test(order_request.notes)) {
-//             // Order request notes do not include the string "Automatically Updated", so add it.
-//             order_request.notes += " Automatically Updated";
-//         }
-//         await order_request.save();
-//     }
-// }
+/**
+ * Adds an item to the active order requests by creating a new order request for it, or if an active
+ * order request exists increments the quantity.
+ * @param {Item} item Item schema to add order request for (or update an existing one)
+ */
+async function createOrUpdateOrderRequest(item) {
+    // First, check if there is an existing incomplete order request
+    let order_request = await OrderRequest.findOne({ itemRef: item._id, status: { $in: ['Not Ordered', 'In Cart'] } });
+    if (!order_request) {
+        // Assume that no active order request exists, create one.
+        order_request = await OrderRequest.create({
+            itemRef: item,
+            request: item.name,
+            quantity: item.desired_stock - item.stock,
+            transactions: [],
+            partNumber: '',
+            notes: 'Automatically Created',
+            actions: []
+        });
+    } else {
+        const regex = /[Aa]utomatically ([Cc]reated|[Uu]pdated)/;
+        // Update the request's desired quantity.
+        if (order_request.quantity < item.desired_stock - item.stock) {
+            if (order_request.orderRef) {
+                // Update price of the order
+                let order = await Order.findById(order_request.orderRef);
+                let newPrice = order.total_price + order_request.itemRef.wholesale_cost * ((item.desired_stock - item.stock) - order_request.quantity);
+                order.total_price = newPrice;
+                await order.save();
+            }
+            order_request.quantity = item.desired_stock - item.stock;
+        }
+        if (!regex.test(order_request.notes)) {
+            // Order request notes do not include the string "Automatically Updated", so add it.
+            order_request.notes += " Automatically Updated";
+        }
+        await order_request.save();
+    }
+}
 
-// /**
-//  * Raises the stock of an Item asynchronously
-//  * @param itemID: ID of Item to update stock of
-//  * @param quantity: amount to raise stock of item
-//  * @return {Promise<OrderRequest>}
-//  */
-// async function increaseItemStock(itemID, quantity) {
-//     // not using try/catch because we want errors to be caught by callers
-//     const itemRef = await Item.findById(itemID);
-//     if (!itemRef) {
-//         // throw error so the frontend knows something went wrong
-//         throw { err: "Stock update requested for invalid item", status: 400 };
-//     }
-//     itemRef.stock += quantity;
-//     /**
-//      * Check to see if we need to automatically create a new order request for this item.
-//      * This is done if the item's stock falls below the desired stock level.
-//      * Only do this if the desired stock is set above 0
-//      */
-//     if (itemRef.stock < itemRef.desired_stock && itemRef.desired_stock > 0) {
-//         await createOrUpdateOrderRequest(itemRef);
-//     }
-//     const restockedItem = await itemRef.save();
-//     if (!restockedItem) {
-//         throw { err: "Failed to save new stock state of item", status: 500 };
-//     }
-//     return restockedItem;
-// }
+/**
+ * Raises the stock of an Item asynchronously
+ * @param itemID: ID of Item to update stock of
+ * @param quantity: amount to raise stock of item
+ * @return {Promise<OrderRequest>}
+ */
+async function increaseItemStock(itemID, quantity) {
+    // not using try/catch because we want errors to be caught by callers
+    const itemRef = await Item.findById(itemID);
+    if (!itemRef) {
+        // throw error so the frontend knows something went wrong
+        throw { err: "Stock update requested for invalid item", status: 400 };
+    }
+    itemRef.stock += quantity;
+    /**
+     * Check to see if we need to automatically create a new order request for this item.
+     * This is done if the item's stock falls below the desired stock level.
+     * Only do this if the desired stock is set above 0
+     */
+    // if (itemRef.stock < itemRef.desired_stock && itemRef.desired_stock > 0) {
+    //     await createOrUpdateOrderRequest(itemRef);
+    // }
+    const restockedItem = await itemRef.save();
+    if (!restockedItem) {
+        throw { err: "Failed to save new stock state of item", status: 500 };
+    }
+    return restockedItem;
+}
 
-// /**
-//  * Lowers the stock of an Item asynchronously
-//  * @param itemID: ID of Item to update stock of
-//  * @param quantity: amount to lower stock of item
-//  * @return {Promise<OrderRequest>}
-//  */
-// async function decreaseItemStock(itemID, quantity) {
-//     let restockedItem = await increaseItemStock(itemID, (-1) * quantity);
-//     return restockedItem;
-// }
+/**
+ * Lowers the stock of an Item asynchronously
+ * @param itemID: ID of Item to update stock of
+ * @param quantity: amount to lower stock of item
+ * @return {Promise<OrderRequest>}
+ */
+async function decreaseItemStock(itemID, quantity) {
+    let restockedItem = await increaseItemStock(itemID, (-1) * quantity);
+    return restockedItem;
+}
 
 module.exports = {
   router: router,
-  // increaseItemStock: increaseItemStock,
-  // decreaseItemStock: decreaseItemStock,
+  increaseItemStock: increaseItemStock,
+  decreaseItemStock: decreaseItemStock,
 };
