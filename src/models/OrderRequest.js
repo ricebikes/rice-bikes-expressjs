@@ -12,6 +12,7 @@ var connection = mongoose.createConnection(config.db_uri);
 
 const OrderRequestSchema = new mongoose.Schema({
     request: String, // describes the item that must be ordered.
+    categories: [String], // describes the categories of this request if manually entered
     quantity: Number,
     transactions: [{type: Number, ref: 'Transaction'}],
     itemRef: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'}, // Item that will be ordered

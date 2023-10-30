@@ -151,7 +151,6 @@ router.get('/distinct-ids', async (req, res) => {
  * {
  *     request: string describing the request (required)
  *     quantity: quantity of item requested for order (required)
- *     partNumber: item part number, if known (optional)
  *     item_id: ObjectID of Item Document to associate with this order (can be null)
  *     transactions: associated transaction IDs for the request (can be null)
  * }
@@ -166,14 +165,14 @@ router.post('/', async (req, res) => {
             item = await Item.findById(req.body.item_id);
             if (!item) return res.status(404).json({ err: "Item ID specified, but no item found", status: 404 });
         }
-        const partNumber = req.body.partNumber;
+        const categories = req.body.categories;
         const quantity = req.body.quantity;
         const request = req.body.request;
         const newOrderReq = await OrderRequest.create({
-            item: item,
-            request: request,
-            partNumber: partNumber,
-            quantity: quantity,
+            itemRef: item,
+            request,
+            categories,
+            quantity
         });
         let transactions = [];
         // Add the order request to transactions
@@ -316,12 +315,18 @@ router.put('/:id/status', async (req, res) => {
     console.log("hi", req.body);
     try {
         if(!req.body.status) return res.status(400).json({erro: "No status specified", status: 400});
-        const orderRequest = await OrderRequest.findById(req.params.id);
+        const orderRequest = await OrderRequest.findById(req.body.id);
         if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
+        console.log('1')
         const updated = await setRequestStatus(orderRequest, req.body.status);
+        console.log('2')
+
         const complete = await updated.save();
+        console.log('3')
+
         return res.status(200).json(complete);
     } catch(err) {
+        console.log('500')
         return res.status(500).json(err);
     }
 });
@@ -555,10 +560,8 @@ async function unfulfillTransactionsOrderRequest(requestRef, transactions) {
  * @param {string} status Status value to set for order request
  */
 async function setRequestStatus(orderRequest, status) {
-    console.log("set request status", orderRequest.status, status);
     //if (orderRequest.status != 'Completed' && status === 'Completed') {
-    if(true) {
-        console.log("!")
+    if(orderRequest.status != 'Completed' && status == 'Completed') {
         /**
          * Need to update stock of attached item, as well as add the item to
          * any transactions waiting for it to arrive
