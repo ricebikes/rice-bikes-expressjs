@@ -472,6 +472,7 @@ router.delete('/:id/transaction/:transactionID', async (req, res) => {
  */
 async function fulfillTransactionsOrderRequest(requestRef, transactions) {
     // not using try/catch because we want errors to be caught by callers
+    console.log('fulfill transactions', requestRef, transactions);
     if (!requestRef) {
         throw { err: "Could not locate order request to fulfill", status: 404 };
     }
@@ -481,11 +482,14 @@ async function fulfillTransactionsOrderRequest(requestRef, transactions) {
         throw { err: "Could not locate item to add to transaction", status: 404 };
     }
     for (let transaction_id of transactions) {
+        console.log("transaction");
         let transactionRef = await Transaction.findById(transaction_id);
+        console.log("ref", transactionRef);
         if (!transactionRef) {
             throw { err: "Could not find transaction to add item to", status: 404 };
         }
         transactionRef = await TransactionController.addItemToTransaction(transactionRef, itemRef);
+        
         /**
          * Note that we do not update the order request here. Once an order request is completed, the relationship between the
          * transaction's orderRequests field and the order request's transactions field can break, and will.
@@ -566,9 +570,12 @@ async function setRequestStatus(orderRequest, status) {
          * Need to update stock of attached item, as well as add the item to
          * any transactions waiting for it to arrive
          */
+        console.log('changing status', orderRequest)
         orderRequest.status = status;
         orderRequest = await orderRequest.save();
+        console.log('saved orderRequest');
         await ItemController.increaseItemStock(orderRequest.itemRef._id, orderRequest.quantity);
+        console.log('increasing stock');
         await fulfillTransactionsOrderRequest(orderRequest, orderRequest.transactions);
     } else if (orderRequest.status == 'Completed' && status != 'Completed') {
         // First try to unfurfill order requests as this may fail.
@@ -627,6 +634,7 @@ router.delete('/:id', async (req, res) => {
         await deleteOrderRequest(orderRequest);
         return res.status(200).json({ status: "OK" });
     } catch (err) {
+        console.log('hello')
         return res.status(500).json(err);
     }
 });
@@ -658,6 +666,13 @@ router.put('/:id/item', async (req, res) => {
             await order.save();
         }
         orderRequest.itemRef = locatedItem._id;
+        let categories = [locatedItem.category_1, null, null];
+        if(locatedItem.category_2) {
+            categories[1] = locatedItem.category_2;
+            if(locatedItem.category_3) categories[2] = locatedItem.category_3;
+        };
+        orderRequest.categories = categories;
+        orderRequest.request = locatedItem.name;
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
             `Assigned item ${locatedItem.name} to request`);
         const finalOrderReq = await loggedOrderReq.save();
