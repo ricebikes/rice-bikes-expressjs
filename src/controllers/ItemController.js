@@ -329,7 +329,8 @@ async function increaseItemStock(itemID, quantity) {
         // throw error so the frontend knows something went wrong
         throw { err: "Stock update requested for invalid item", status: 400 };
     }
-    itemRef.in_stock += quantity;
+    if(!itemRef.in_stock) itemRef.in_stock = quantity;
+    else itemRef.in_stock += quantity;
     /**
      * Check to see if we need to automatically create a new order request for this item.
      * This is done if the item's stock falls below the desired stock level.
