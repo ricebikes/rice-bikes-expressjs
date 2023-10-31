@@ -242,14 +242,9 @@ router.put("/:id", function (req, res) {
     name,
     upc,
     category_1,
-    category_2,
-    category_3,
     brand,
     standard_price,
     wholesale_cost,
-    specifications,
-    features,
-    in_stock,
   } = req.body;
   // validate the request before proceeding. Be less aggressive than we are when validating new items.
   if (
@@ -273,6 +268,11 @@ router.put("/:id", function (req, res) {
     function (err, item) {
       if (err) return res.status(500).json(err);
       if (!item) return res.status(404).send();
+      console.log("compare current stock and min stock")
+      console.log(item.in_stock, item.min_stock);
+      if(item.in_stock < item.min_stock) {
+        createOrUpdateOrderRequest(item);
+      }
       return res.status(200).json(item);
     }
   );
@@ -302,30 +302,16 @@ async function createOrUpdateOrderRequest(item) {
         order_request = await OrderRequest.create({
             itemRef: item,
             request: item.name,
-            quantity: item.desired_stock - item.stock,
+            category_1: item.category_1,
+            category_2: item.category_2,
+            category_3: item.category_3,
+            quantity: item.min_stock || 0,
             transactions: [],
-            partNumber: '',
-            notes: 'Automatically Created',
+            notes: 'automatically created, please specify quantity',
             actions: []
         });
     } else {
-        const regex = /[Aa]utomatically ([Cc]reated|[Uu]pdated)/;
-        // Update the request's desired quantity.
-        if (order_request.quantity < item.desired_stock - item.stock) {
-            if (order_request.orderRef) {
-                // Update price of the order
-                let order = await Order.findById(order_request.orderRef);
-                let newPrice = order.total_price + order_request.itemRef.wholesale_cost * ((item.desired_stock - item.stock) - order_request.quantity);
-                order.total_price = newPrice;
-                await order.save();
-            }
-            order_request.quantity = item.desired_stock - item.stock;
-        }
-        if (!regex.test(order_request.notes)) {
-            // Order request notes do not include the string "Automatically Updated", so add it.
-            order_request.notes += " Automatically Updated";
-        }
-        await order_request.save();
+      console.log('this order request already exists');
     }
 }
 
@@ -336,13 +322,14 @@ async function createOrUpdateOrderRequest(item) {
  * @return {Promise<OrderRequest>}
  */
 async function increaseItemStock(itemID, quantity) {
+  console.log('increased item stock', itemID, quantity);
     // not using try/catch because we want errors to be caught by callers
     const itemRef = await Item.findById(itemID);
     if (!itemRef) {
         // throw error so the frontend knows something went wrong
         throw { err: "Stock update requested for invalid item", status: 400 };
     }
-    itemRef.stock += quantity;
+    itemRef.in_stock += quantity;
     /**
      * Check to see if we need to automatically create a new order request for this item.
      * This is done if the item's stock falls below the desired stock level.
@@ -352,6 +339,7 @@ async function increaseItemStock(itemID, quantity) {
     //     await createOrUpdateOrderRequest(itemRef);
     // }
     const restockedItem = await itemRef.save();
+    console.log(restockedItem);
     if (!restockedItem) {
         throw { err: "Failed to save new stock state of item", status: 500 };
     }
