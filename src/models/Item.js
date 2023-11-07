@@ -17,7 +17,7 @@ var ItemSchema = new mongoose.Schema({
     standard_price: Number,
     wholesale_cost: Number,
     in_stock: Number,
-    min_stock: Number,
+    threshold_stock: Number,
 
     last_updated: Date,
 });

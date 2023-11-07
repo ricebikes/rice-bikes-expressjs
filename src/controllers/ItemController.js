@@ -261,6 +261,7 @@ router.put("/:id", function (req, res) {
       .status(400)
       .json({ err: "Malformed request, missing fields", status: 400 });
   }
+  console.log('disable?', req.params.id);
   Item.findByIdAndUpdate(
     req.params.id,
     req.body,
@@ -268,9 +269,8 @@ router.put("/:id", function (req, res) {
     function (err, item) {
       if (err) return res.status(500).json(err);
       if (!item) return res.status(404).send();
-      console.log("compare current stock and min stock")
-      console.log(item.in_stock, item.min_stock);
-      if(item.in_stock < item.min_stock) {
+      console.log("compare current stock and threshold stock", item)
+      if(item.in_stock < item.threshold_stock) {
         createOrUpdateOrderRequest(item);
       }
       return res.status(200).json(item);
@@ -302,10 +302,8 @@ async function createOrUpdateOrderRequest(item) {
         order_request = await OrderRequest.create({
             itemRef: item,
             request: item.name,
-            category_1: item.category_1,
-            category_2: item.category_2,
-            category_3: item.category_3,
-            quantity: item.min_stock || 0,
+            categories: [item.category_1, item.category_2, item.category_3],
+            quantity: item.threshold_stock || 0,
             transactions: [],
             notes: 'automatically created, please specify quantity',
             actions: []

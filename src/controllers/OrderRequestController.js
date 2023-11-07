@@ -489,7 +489,6 @@ async function fulfillTransactionsOrderRequest(requestRef, transactions) {
             throw { err: "Could not find transaction to add item to", status: 404 };
         }
         transactionRef = await TransactionController.addItemToTransaction(transactionRef, itemRef);
-        
         /**
          * Note that we do not update the order request here. Once an order request is completed, the relationship between the
          * transaction's orderRequests field and the order request's transactions field can break, and will.
