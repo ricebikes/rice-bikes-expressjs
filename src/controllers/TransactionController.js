@@ -997,6 +997,7 @@ router.get("/:id/email-receipt", async (req, res) => {
  * @param {OrderRequest} orderRequest Order request to remove
  */
 async function removeOrderRequestFromTransaction(transaction, orderRequest) {
+  console.log('removing order from transaction', transaction.orderRequests, orderRequest);
   let index = transaction.orderRequests.findIndex(
     (x) => x._id.toString() == orderRequest._id.toString()
   );

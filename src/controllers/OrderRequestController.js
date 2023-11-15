@@ -151,7 +151,6 @@ router.get('/distinct-ids', async (req, res) => {
  * {
  *     request: string describing the request (required)
  *     quantity: quantity of item requested for order (required)
- *     partNumber: item part number, if known (optional)
  *     item_id: ObjectID of Item Document to associate with this order (can be null)
  *     transactions: associated transaction IDs for the request (can be null)
  * }
@@ -166,14 +165,14 @@ router.post('/', async (req, res) => {
             item = await Item.findById(req.body.item_id);
             if (!item) return res.status(404).json({ err: "Item ID specified, but no item found", status: 404 });
         }
-        const partNumber = req.body.partNumber;
+        const categories = req.body.categories;
         const quantity = req.body.quantity;
         const request = req.body.request;
         const newOrderReq = await OrderRequest.create({
-            item: item,
-            request: request,
-            partNumber: partNumber,
-            quantity: quantity,
+            itemRef: item,
+            request,
+            categories,
+            quantity
         });
         let transactions = [];
         // Add the order request to transactions
@@ -305,6 +304,29 @@ router.put("/:id/quantity", async (req, res) => {
         const finalOrderReq = await loggedOrderReq.save();
         return res.status(200).json(finalOrderReq);
     } catch (err) {
+        return res.status(500).json(err);
+    }
+});
+
+/**
+ * PUT: /:id/status - update request's status to complete
+ */
+router.put('/:id/status', async (req, res) => {
+    console.log("hi", req.body);
+    try {
+        if(!req.body.status) return res.status(400).json({erro: "No status specified", status: 400});
+        const orderRequest = await OrderRequest.findById(req.body.id);
+        if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
+        console.log('1')
+        const updated = await setRequestStatus(orderRequest, req.body.status);
+        console.log('2')
+
+        const complete = await updated.save();
+        console.log('3')
+
+        return res.status(200).json(complete);
+    } catch(err) {
+        console.log('500')
         return res.status(500).json(err);
     }
 });
@@ -450,6 +472,7 @@ router.delete('/:id/transaction/:transactionID', async (req, res) => {
  */
 async function fulfillTransactionsOrderRequest(requestRef, transactions) {
     // not using try/catch because we want errors to be caught by callers
+    console.log('fulfill transactions', requestRef, transactions);
     if (!requestRef) {
         throw { err: "Could not locate order request to fulfill", status: 404 };
     }
@@ -459,7 +482,9 @@ async function fulfillTransactionsOrderRequest(requestRef, transactions) {
         throw { err: "Could not locate item to add to transaction", status: 404 };
     }
     for (let transaction_id of transactions) {
+        console.log("transaction");
         let transactionRef = await Transaction.findById(transaction_id);
+        console.log("ref", transactionRef);
         if (!transactionRef) {
             throw { err: "Could not find transaction to add item to", status: 404 };
         }
@@ -538,14 +563,18 @@ async function unfulfillTransactionsOrderRequest(requestRef, transactions) {
  * @param {string} status Status value to set for order request
  */
 async function setRequestStatus(orderRequest, status) {
-    if (orderRequest.status != 'Completed' && status == 'Completed') {
+    //if (orderRequest.status != 'Completed' && status === 'Completed') {
+    if(orderRequest.status != 'Completed' && status == 'Completed') {
         /**
          * Need to update stock of attached item, as well as add the item to
          * any transactions waiting for it to arrive
          */
+        console.log('changing status', orderRequest)
         orderRequest.status = status;
         orderRequest = await orderRequest.save();
+        console.log('saved orderRequest');
         await ItemController.increaseItemStock(orderRequest.itemRef._id, orderRequest.quantity);
+        console.log('increasing stock');
         await fulfillTransactionsOrderRequest(orderRequest, orderRequest.transactions);
     } else if (orderRequest.status == 'Completed' && status != 'Completed') {
         // First try to unfurfill order requests as this may fail.
@@ -564,6 +593,7 @@ async function setRequestStatus(orderRequest, status) {
     } else {
         orderRequest.status = status;
     }
+    console.log("ORDER", orderRequest);
     return orderRequest;
 }
 
@@ -603,6 +633,7 @@ router.delete('/:id', async (req, res) => {
         await deleteOrderRequest(orderRequest);
         return res.status(200).json({ status: "OK" });
     } catch (err) {
+        console.log('hello')
         return res.status(500).json(err);
     }
 });
@@ -634,6 +665,13 @@ router.put('/:id/item', async (req, res) => {
             await order.save();
         }
         orderRequest.itemRef = locatedItem._id;
+        let categories = [locatedItem.category_1, null, null];
+        if(locatedItem.category_2) {
+            categories[1] = locatedItem.category_2;
+            if(locatedItem.category_3) categories[2] = locatedItem.category_3;
+        };
+        orderRequest.categories = categories;
+        orderRequest.request = locatedItem.name;
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
             `Assigned item ${locatedItem.name} to request`);
         const finalOrderReq = await loggedOrderReq.save();

@@ -12,14 +12,14 @@ var connection = mongoose.createConnection(config.db_uri);
 
 const OrderRequestSchema = new mongoose.Schema({
     request: String, // describes the item that must be ordered.
-    partNumber: String, // The item's part number, if known
+    categories: [String], // describes the categories of this request if manually entered
     quantity: Number,
     transactions: [{type: Number, ref: 'Transaction'}],
     itemRef: {type: mongoose.Schema.Types.ObjectId, ref: 'Item'}, // Item that will be ordered
-    orderRef: {type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null},
+    // orderRef: {type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null},
     notes: String, // Generic transaction notes
     status: {type: String, default: "Not Ordered"}, // Modifications to order holding this request should change this status
-    supplier: String, // Modifications to order holding this request should change the supplier
+    // supplier: String, // Modifications to order holding this request should change the supplier
     // Track actions taken on Order Requests.
     actions: [{
         employee: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
