@@ -334,9 +334,9 @@ async function createOrUpdateOrderRequest(item) {
  * @return {Promise<OrderRequest>}
  */
 async function increaseItemStock(itemID, quantity) {
-  console.log('increased item stock', itemID, quantity);
   // not using try/catch because we want errors to be caught by callers
   const itemRef = await Item.findById(itemID);
+  console.log("inc item stock", itemRef)
   if (!itemRef) {
     // throw error so the frontend knows something went wrong
     throw { err: "Stock update requested for invalid item", status: 400 };
@@ -352,7 +352,7 @@ async function increaseItemStock(itemID, quantity) {
   //     await createOrUpdateOrderRequest(itemRef);
   // }
   const restockedItem = await itemRef.save();
-  console.log(restockedItem);
+  console.log("hi")
   if (!restockedItem) {
     throw { err: "Failed to save new stock state of item", status: 500 };
   }

@@ -214,6 +214,7 @@ router.get("/searchByDate/:dates", function (req, res) {
  */
 async function addLogToTransaction(transaction, req, description) {
   const user_id = req.headers["user-id"];
+  console.log("\n\nhi\n\n",req.headers, description);
   if (!user_id) throw { error: "did not find a user-id header", status: 400 };
   try {
     const user = await User.findById(user_id);
@@ -368,6 +369,8 @@ router.put("/:id/description", async (req, res) => {
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction)
       return res.status(404).json({ err: "No transaction found", status: 404 });
+    console.log("DESCRIPTION", req.headers);
+
     if (!req.headers["user-id"])
       return res.status(400).json({ err: "No user id provided", status: 400 });
     const user_id = req.headers["user-id"];
@@ -1054,6 +1057,7 @@ router.put(
 module.exports = {
   router: router,
   addItemToTransaction: addItemToTransaction,
+  addLogToTransaction: addLogToTransaction,
   removeItemFromTransaction: removeItemFromTransaction,
   addOrderRequestToTransaction: addOrderRequestToTransaction,
   removeOrderRequestFromTransaction: removeOrderRequestFromTransaction,

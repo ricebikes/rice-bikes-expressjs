@@ -64,6 +64,7 @@ async function setOrderPrice(order, price) {
  * @return Promise<OrderRequest> -- transaction with log on it
  */
 async function addLogToOrderRequest(item, req, description) {
+    console.log("add log to order request");
     const user_id = req.headers['user-id'];
     if (!user_id) throw { error: 'did not find a user-id header' };
     try {
@@ -208,11 +209,13 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id/request', async (req, res) => {
     try {
+        console.log("HI", req.headers);
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
         if (!req.body.request) return res.status(400).json({ err: "Empty or malformed request string", status: 400 });
+        const oldDesc = orderRequest.request;
         orderRequest.request = req.body.request;
-        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, "Updated request description to " + orderRequest.request);
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, `Changed request description "${oldDesc}" to "${orderRequest.request}"`);
         const finalOrderReq = await loggedOrderReq.save();
         return res.status(200).json(finalOrderReq);
     } catch (err) {
@@ -265,8 +268,9 @@ router.put('/:id/notes', async (req, res) => {
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
         if (req.body.notes == null) return res.status(400).json({ err: "Empty or malformed notes string", status: 400 });
+        const oldNotes = orderRequest.notes;
         orderRequest.notes = req.body.notes;
-        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, "Updated notes");
+        const loggedOrderReq = await addLogToOrderRequest(orderRequest, req, `Changed notes from "${oldNotes}" to "${req.body.notes}"`);
         const finalOrderReq = await loggedOrderReq.save();
         return res.status(200).json(finalOrderReq);
     } catch (err) {
@@ -312,21 +316,16 @@ router.put("/:id/quantity", async (req, res) => {
  * PUT: /:id/status - update request's status to complete
  */
 router.put('/:id/status', async (req, res) => {
-    console.log("hi", req.body);
     try {
-        if(!req.body.status) return res.status(400).json({erro: "No status specified", status: 400});
+        if (!req.body.status) return res.status(400).json({ erro: "No status specified", status: 400 });
         const orderRequest = await OrderRequest.findById(req.body.id);
         if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
-        console.log('1')
-        const updated = await setRequestStatus(orderRequest, req.body.status);
-        console.log('2')
-
+        console.log("STATUS", req.headers, orderRequest);
+        const updated = await setRequestStatus(orderRequest, req.body.status, req);
         const complete = await updated.save();
-        console.log('3')
 
         return res.status(200).json(complete);
-    } catch(err) {
-        console.log('500')
+    } catch (err) {
         return res.status(500).json(err);
     }
 });
@@ -469,8 +468,9 @@ router.delete('/:id/transaction/:transactionID', async (req, res) => {
  * @param {OrderRequest} requestRef: Order request to fulfill on transactions
  * @param {number[]} transactions: transactions to add item to. One of the item associated to the request will be added to each transaction in the array
  *                                  (so if a transaction appears twice, two items will be added)
+ * @param {Object} req: http request containnig user ID
  */
-async function fulfillTransactionsOrderRequest(requestRef, transactions) {
+async function fulfillTransactionsOrderRequest(requestRef, transactions, req = null) {
     // not using try/catch because we want errors to be caught by callers
     console.log('fulfill transactions', requestRef, transactions);
     if (!requestRef) {
@@ -488,6 +488,8 @@ async function fulfillTransactionsOrderRequest(requestRef, transactions) {
         if (!transactionRef) {
             throw { err: "Could not find transaction to add item to", status: 404 };
         }
+        // add log to transaction
+        await TransactionController.addLogToTransaction(transactionRef, req, `Added ${requestRef.request} from completed Whiteboard Request`)
         transactionRef = await TransactionController.addItemToTransaction(transactionRef, itemRef);
         /**
          * Note that we do not update the order request here. Once an order request is completed, the relationship between the
@@ -560,22 +562,21 @@ async function unfulfillTransactionsOrderRequest(requestRef, transactions) {
  * If the request is marked as complete (or marked as incomplete when it previously was completed), 
  * this function will also edit the stock of any attached items, as well as update transactions attached to the request
  * @param {OrderRequest} orderRequest Order request to set status for
- * @param {string} status Status value to set for order request
+ * @param {string} status Order request status
+ * @param {Object} req http request object
  */
-async function setRequestStatus(orderRequest, status) {
-    //if (orderRequest.status != 'Completed' && status === 'Completed') {
-    if(orderRequest.status != 'Completed' && status == 'Completed') {
+async function setRequestStatus(orderRequest, status, req = null) {
+    console.log("SET STATUS", status);
+    if (orderRequest.status != 'Completed' && status == 'Completed') {
         /**
          * Need to update stock of attached item, as well as add the item to
          * any transactions waiting for it to arrive
          */
-        console.log('changing status', orderRequest)
+        console.log('set request status as complete')
         orderRequest.status = status;
         orderRequest = await orderRequest.save();
-        console.log('saved orderRequest');
         await ItemController.increaseItemStock(orderRequest.itemRef._id, orderRequest.quantity);
-        console.log('increasing stock');
-        await fulfillTransactionsOrderRequest(orderRequest, orderRequest.transactions);
+        await fulfillTransactionsOrderRequest(orderRequest, orderRequest.transactions, req);
     } else if (orderRequest.status == 'Completed' && status != 'Completed') {
         // First try to unfurfill order requests as this may fail.
         await unfulfillTransactionsOrderRequest(orderRequest, orderRequest.transactions);
@@ -652,6 +653,7 @@ router.use(adminMiddleware);
  */
 router.put('/:id/item', async (req, res) => {
     try {
+        console.log("put /it")
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
         if (orderRequest.status == 'Completed') return res.status(400).json({ err: "Cannot change item on completed order request", status: 400 });
@@ -665,11 +667,17 @@ router.put('/:id/item', async (req, res) => {
             await order.save();
         }
         orderRequest.itemRef = locatedItem._id;
-        let categories = [locatedItem.category_1, null, null];
-        if(locatedItem.category_2) {
-            categories[1] = locatedItem.category_2;
-            if(locatedItem.category_3) categories[2] = locatedItem.category_3;
-        };
+        let categories;
+        if (locatedItem.category_1) {
+            categories = [locatedItem.category_1, null, null];
+            if (locatedItem.category_2) {
+                categories[1] = locatedItem.category_2;
+                if (locatedItem.category_3) categories[2] = locatedItem.category_3;
+            };
+        }
+        else {
+            categories = [locatedItem.category]
+        }
         orderRequest.categories = categories;
         orderRequest.request = locatedItem.name;
         const loggedOrderReq = await addLogToOrderRequest(orderRequest, req,
