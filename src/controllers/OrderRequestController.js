@@ -64,7 +64,7 @@ async function setOrderPrice(order, price) {
  * @return Promise<OrderRequest> -- transaction with log on it
  */
 async function addLogToOrderRequest(item, req, description) {
-    console.log("add log to order request");
+    console.log("add log to order request", item, req.headers);
     const user_id = req.headers['user-id'];
     if (!user_id) throw { error: 'did not find a user-id header' };
     try {
@@ -74,6 +74,7 @@ async function addLogToOrderRequest(item, req, description) {
             "description": description,
             "time": Date.now()
         };
+        console.log("ACTION", action);
         // Add this action first in the array
         item.actions.unshift(action);
         return item;
@@ -575,7 +576,9 @@ async function setRequestStatus(orderRequest, status, req = null) {
         console.log('set request status as complete')
         orderRequest.status = status;
         orderRequest = await orderRequest.save();
+        console.log("saved order req")
         await ItemController.increaseItemStock(orderRequest.itemRef._id, orderRequest.quantity);
+        console.log("increased item stock")
         await fulfillTransactionsOrderRequest(orderRequest, orderRequest.transactions, req);
     } else if (orderRequest.status == 'Completed' && status != 'Completed') {
         // First try to unfurfill order requests as this may fail.
@@ -695,6 +698,7 @@ router.put('/:id/item', async (req, res) => {
 
 module.exports = {
     router: router,
+    addLogToOrderRequest: addLogToOrderRequest,
     addOrderToOrderRequest: addOrderToOrderRequest,
     removeOrderFromRequest: removeOrderFromRequest,
     setRequestStatus: setRequestStatus,

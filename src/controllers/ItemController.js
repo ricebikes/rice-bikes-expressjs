@@ -13,6 +13,7 @@ const company_prefix = "011111"; // ?
 const fs = require('fs');
 const papa = require('papaparse');
 const path = require('path');
+const OrderRequestController = require("./OrderRequestController");
 const qbp_catalog_path = path.join(__dirname, '../../config/qbp_catalog.csv');
 const qbp_catalog = fs.readFileSync(qbp_catalog_path, 'utf8');
 
@@ -159,7 +160,6 @@ router.put("/upc/:upc", async function (req, res) {
       res.status(200).json(item);
     } else {
       let product = fetchQBPProduct(upc);
-      console.log("prfoduct", product);
       if (product) { // no categories
         product.last_updated = new Date();
         res.status(201).json(product); // send back un created item
@@ -276,7 +276,6 @@ router.put("/:id", function (req, res) {
       .status(400)
       .json({ err: "Malformed request, missing fields", status: 400 });
   }
-  console.log('disable?', req.params.id);
   Item.findByIdAndUpdate(
     req.params.id,
     req.body,
@@ -285,7 +284,7 @@ router.put("/:id", function (req, res) {
       if (err) return res.status(500).json(err);
       if (!item) return res.status(404).send();
       if (item.in_stock < item.threshold_stock) {
-        createOrUpdateOrderRequest(item);
+        createOrUpdateOrderRequest(item, req);
       }
       return res.status(200).json(item);
     }
@@ -293,12 +292,28 @@ router.put("/:id", function (req, res) {
 });
 
 /**
+ * Updates an item by the UPC code. Simply overwrites the current item with whatever is sent.
+ */
+router.put("/item/upc/:upc", function (req, res) {
+  console.log("BODY REQ", req.body);
+  Item.updateMany({"upc": req.params.upc}, req.body, function (err, item) {
+    if (err) return res.status(500).json(err);
+    if (!item) return res.status(404).send();
+    return res.status(200).json(item);
+  });
+});
+
+/**
+ * Toggles
+ */
+/**
  * Gets all items from the backend. Notably, will NOT return managed items. These items are handled exclusively on the
  * backend, and removing or adding one to a transaction should not be possible.
  */
 router.get("/", function (req, res) {
   Item.find({}, function (err, items) {
     if (err) return res.status(500).send(err);
+    console.log("items", items[0]);
     return res.status(200).send(items);
   });
 });
@@ -307,8 +322,9 @@ router.get("/", function (req, res) {
  * Adds an item to the active order requests by creating a new order request for it, or if an active
  * order request exists increments the quantity.
  * @param {Item} item Item schema to add order request for (or update an existing one)
+ * @param {Object} req Contains headers to the user that made this edit.
  */
-async function createOrUpdateOrderRequest(item) {
+async function createOrUpdateOrderRequest(item, req) {
   // First, check if there is an existing incomplete order request
   let order_request = await OrderRequest.findOne({ itemRef: item._id, status: { $in: ['Not Ordered', 'In Cart'] } });
   if (!order_request) {
@@ -322,6 +338,10 @@ async function createOrUpdateOrderRequest(item) {
       notes: 'automatically created, please specify quantity',
       actions: []
     });
+    console.log("helloooo");
+    const loggedOrderReq = await OrderRequestController.addLogToOrderRequest(order_request, req, 'Automatically created because stock dropped below threshold');
+    const savedOrderReq = await loggedOrderReq.save();
+    return savedOrderReq;
   } else {
     console.log('this order request already exists');
   }
@@ -334,6 +354,7 @@ async function createOrUpdateOrderRequest(item) {
  * @return {Promise<OrderRequest>}
  */
 async function increaseItemStock(itemID, quantity) {
+  console.log("hi", itemID)
   // not using try/catch because we want errors to be caught by callers
   const itemRef = await Item.findById(itemID);
   console.log("inc item stock", itemRef)
@@ -407,6 +428,7 @@ function fetchQBPProduct(upc) {
 
 module.exports = {
   router: router,
-  increaseItemStock: increaseItemStock,
-  decreaseItemStock: decreaseItemStock,
 };
+
+exports.increaseItemStock = increaseItemStock;
+exports.decreaseItemStock = decreaseItemStock;
