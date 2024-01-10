@@ -5,7 +5,6 @@ var Item = require("../models/Item");
 var adminMiddleware = require("../middleware/AdminMiddleware");
 var authMiddleware = require("../middleware/AuthMiddleware");
 const OrderRequest = require("./../models/OrderRequest");
-const Order = require("../models/Order");
 const KhsProduct = require("../models/KhsProduct");
 const item_categories = require("../../config/item_categories");
 const company_prefix = "011111"; // ?
@@ -44,7 +43,8 @@ router.get("/brands", function (req, res) {
  *  name: the name of the item.
  *  brand: item brand
  *  category_1,_2,_3: Item category
- *  upc: Item Universal Product Code (used items will lack one)
+ *  upc: Item Universal Product Code (used items will lack one),
+ *  filterDisabled: if included in params, return only enabled items
  */
 router.get("/search", function (req, res) {
   // add all basic query parameters into object
@@ -55,6 +55,10 @@ router.get("/search", function (req, res) {
     category_3: req.query.category_3,
     upc: req.query.upc,
   };
+  // return only the enabled items
+  if (req.query.filterDisabled) {
+    query_object["disabled"] = { $in: [null, false] };
+  }
   // if our query defines a name, add that here. Required since the name portion uses indexed searching (for speed)
   if (req.query.name) {
     query_object["$text"] = { $search: req.query.name };
@@ -64,6 +68,7 @@ router.get("/search", function (req, res) {
     (a, [k, v]) => (v == null ? a : { ...a, [k]: v }),
     {}
   );
+  console.log("query object", query_object)
   Item.find(query_object, function (err, items) {
     if (err) return res.status(500).json(err);
     res.status(200).json(items);
@@ -291,21 +296,6 @@ router.put("/:id", function (req, res) {
   );
 });
 
-/**
- * Updates an item by the UPC code. Simply overwrites the current item with whatever is sent.
- */
-router.put("/item/upc/:upc", function (req, res) {
-  console.log("BODY REQ", req.body);
-  Item.updateMany({"upc": req.params.upc}, req.body, function (err, item) {
-    if (err) return res.status(500).json(err);
-    if (!item) return res.status(404).send();
-    return res.status(200).json(item);
-  });
-});
-
-/**
- * Toggles
- */
 /**
  * Gets all items from the backend. Notably, will NOT return managed items. These items are handled exclusively on the
  * backend, and removing or adding one to a transaction should not be possible.

@@ -15,7 +15,6 @@ const Repair = require("./../models/Repair");
 const User = require("./../models/User");
 const _ = require("underscore");
 const config = require("../config");
-const ItemController = require("./ItemController");
 const getMailer = require("./../email");
 
 router.use(bodyParser.json());
