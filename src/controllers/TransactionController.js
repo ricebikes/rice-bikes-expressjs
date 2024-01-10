@@ -93,7 +93,6 @@ Bad practice but it works
 router.get("/", async (req, res) => {
   try {
     let query = req.query;
-    console.log("query", query);
     for (let [key, value] of Object.entries(query)) {
       query[key] = JSON.parse(value);
     }
@@ -122,7 +121,6 @@ router.get("/", async (req, res) => {
 
     // Paid & All (TODO: pagination)
     if (query.is_paid || Object.keys(query).length == 0) {
-      console.log('hi')
       transactions = transactions.sort((b, a) => {
         return (
           new Date(a.date_created).getTime() -
@@ -213,7 +211,6 @@ router.get("/searchByDate/:dates", function (req, res) {
  */
 async function addLogToTransaction(transaction, req, description) {
   const user_id = req.headers["user-id"];
-  console.log("\n\nhi\n\n",req.headers, description);
   if (!user_id) throw { error: "did not find a user-id header", status: 400 };
   try {
     const user = await User.findById(user_id);
@@ -368,7 +365,6 @@ router.put("/:id/description", async (req, res) => {
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction)
       return res.status(404).json({ err: "No transaction found", status: 404 });
-    console.log("DESCRIPTION", req.headers);
 
     if (!req.headers["user-id"])
       return res.status(400).json({ err: "No user id provided", status: 400 });
@@ -999,7 +995,6 @@ router.get("/:id/email-receipt", async (req, res) => {
  * @param {OrderRequest} orderRequest Order request to remove
  */
 async function removeOrderRequestFromTransaction(transaction, orderRequest) {
-  console.log('removing order from transaction', transaction.orderRequests, orderRequest);
   let index = transaction.orderRequests.findIndex(
     (x) => x._id.toString() == orderRequest._id.toString()
   );

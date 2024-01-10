@@ -68,7 +68,6 @@ router.get("/search", function (req, res) {
     (a, [k, v]) => (v == null ? a : { ...a, [k]: v }),
     {}
   );
-  console.log("query object", query_object)
   Item.find(query_object, function (err, items) {
     if (err) return res.status(500).json(err);
     res.status(200).json(items);
@@ -303,7 +302,6 @@ router.put("/:id", function (req, res) {
 router.get("/", function (req, res) {
   Item.find({}, function (err, items) {
     if (err) return res.status(500).send(err);
-    console.log("items", items[0]);
     return res.status(200).send(items);
   });
 });
@@ -328,7 +326,6 @@ async function createOrUpdateOrderRequest(item, req) {
       notes: 'automatically created, please specify quantity',
       actions: []
     });
-    console.log("helloooo");
     const loggedOrderReq = await OrderRequestController.addLogToOrderRequest(order_request, req, 'Automatically created because stock dropped below threshold');
     const savedOrderReq = await loggedOrderReq.save();
     return savedOrderReq;
@@ -344,10 +341,8 @@ async function createOrUpdateOrderRequest(item, req) {
  * @return {Promise<OrderRequest>}
  */
 async function increaseItemStock(itemID, quantity) {
-  console.log("hi", itemID)
   // not using try/catch because we want errors to be caught by callers
   const itemRef = await Item.findById(itemID);
-  console.log("inc item stock", itemRef)
   if (!itemRef) {
     // throw error so the frontend knows something went wrong
     throw { err: "Stock update requested for invalid item", status: 400 };
@@ -363,7 +358,6 @@ async function increaseItemStock(itemID, quantity) {
   //     await createOrUpdateOrderRequest(itemRef);
   // }
   const restockedItem = await itemRef.save();
-  console.log("hi")
   if (!restockedItem) {
     throw { err: "Failed to save new stock state of item", status: 500 };
   }

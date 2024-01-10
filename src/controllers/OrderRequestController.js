@@ -64,7 +64,6 @@ async function setOrderPrice(order, price) {
  * @return Promise<OrderRequest> -- transaction with log on it
  */
 async function addLogToOrderRequest(item, req, description) {
-    console.log("add log to order request", item, req.headers);
     const user_id = req.headers['user-id'];
     if (!user_id) throw { error: 'did not find a user-id header' };
     try {
@@ -74,7 +73,6 @@ async function addLogToOrderRequest(item, req, description) {
             "description": description,
             "time": Date.now()
         };
-        console.log("ACTION", action);
         // Add this action first in the array
         item.actions.unshift(action);
         return item;
@@ -210,7 +208,6 @@ router.post('/', async (req, res) => {
  */
 router.put('/:id/request', async (req, res) => {
     try {
-        console.log("HI", req.headers);
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
         if (!req.body.request) return res.status(400).json({ err: "Empty or malformed request string", status: 400 });
@@ -321,7 +318,6 @@ router.put('/:id/status', async (req, res) => {
         if (!req.body.status) return res.status(400).json({ erro: "No status specified", status: 400 });
         const orderRequest = await OrderRequest.findById(req.body.id);
         if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
-        console.log("STATUS", req.headers, orderRequest);
         const updated = await setRequestStatus(orderRequest, req.body.status, req);
         const complete = await updated.save();
 
@@ -473,7 +469,6 @@ router.delete('/:id/transaction/:transactionID', async (req, res) => {
  */
 async function fulfillTransactionsOrderRequest(requestRef, transactions, req = null) {
     // not using try/catch because we want errors to be caught by callers
-    console.log('fulfill transactions', requestRef, transactions);
     if (!requestRef) {
         throw { err: "Could not locate order request to fulfill", status: 404 };
     }
@@ -483,9 +478,7 @@ async function fulfillTransactionsOrderRequest(requestRef, transactions, req = n
         throw { err: "Could not locate item to add to transaction", status: 404 };
     }
     for (let transaction_id of transactions) {
-        console.log("transaction");
         let transactionRef = await Transaction.findById(transaction_id);
-        console.log("ref", transactionRef);
         if (!transactionRef) {
             throw { err: "Could not find transaction to add item to", status: 404 };
         }
@@ -567,18 +560,14 @@ async function unfulfillTransactionsOrderRequest(requestRef, transactions) {
  * @param {Object} req http request object
  */
 async function setRequestStatus(orderRequest, status, req = null) {
-    console.log("SET STATUS", status);
     if (orderRequest.status != 'Completed' && status == 'Completed') {
         /**
          * Need to update stock of attached item, as well as add the item to
          * any transactions waiting for it to arrive
          */
-        console.log('set request status as complete')
         orderRequest.status = status;
         orderRequest = await orderRequest.save();
-        console.log("saved order req")
         await ItemController.increaseItemStock(orderRequest.itemRef._id, orderRequest.quantity);
-        console.log("increased item stock")
         await fulfillTransactionsOrderRequest(orderRequest, orderRequest.transactions, req);
     } else if (orderRequest.status == 'Completed' && status != 'Completed') {
         // First try to unfurfill order requests as this may fail.
@@ -597,7 +586,6 @@ async function setRequestStatus(orderRequest, status, req = null) {
     } else {
         orderRequest.status = status;
     }
-    console.log("ORDER", orderRequest);
     return orderRequest;
 }
 
@@ -637,7 +625,6 @@ router.delete('/:id', async (req, res) => {
         await deleteOrderRequest(orderRequest);
         return res.status(200).json({ status: "OK" });
     } catch (err) {
-        console.log('hello')
         return res.status(500).json(err);
     }
 });
@@ -656,7 +643,6 @@ router.use(adminMiddleware);
  */
 router.put('/:id/item', async (req, res) => {
     try {
-        console.log("put /it")
         const orderRequest = await OrderRequest.findById(req.params.id);
         if (!orderRequest) return res.status(404).json({ err: "No matching order request found", status: 404 });
         if (orderRequest.status == 'Completed') return res.status(400).json({ err: "Cannot change item on completed order request", status: 400 });
