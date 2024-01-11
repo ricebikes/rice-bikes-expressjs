@@ -23,6 +23,8 @@
     "mongoose-plugin-autoinc": "^1.1.9",
     "morgan": "^1.8.2",
     "nodemailer": "^6.4.17",
+    "papaparse": "^5.4.1",
+    "path": "^0.12.7",
     "pug": "^3.0.0",
     "puppeteer": "^16.1.0",
     "request": "^2.83.0",

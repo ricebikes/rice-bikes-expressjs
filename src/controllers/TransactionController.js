@@ -15,7 +15,6 @@ const Repair = require("./../models/Repair");
 const User = require("./../models/User");
 const _ = require("underscore");
 const config = require("../config");
-const ItemController = require("./ItemController");
 const getMailer = require("./../email");
 
 router.use(bodyParser.json());
@@ -94,7 +93,6 @@ Bad practice but it works
 router.get("/", async (req, res) => {
   try {
     let query = req.query;
-    console.log("query", query);
     for (let [key, value] of Object.entries(query)) {
       query[key] = JSON.parse(value);
     }
@@ -123,7 +121,6 @@ router.get("/", async (req, res) => {
 
     // Paid & All (TODO: pagination)
     if (query.is_paid || Object.keys(query).length == 0) {
-      console.log('hi')
       transactions = transactions.sort((b, a) => {
         return (
           new Date(a.date_created).getTime() -
@@ -368,6 +365,7 @@ router.put("/:id/description", async (req, res) => {
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction)
       return res.status(404).json({ err: "No transaction found", status: 404 });
+
     if (!req.headers["user-id"])
       return res.status(400).json({ err: "No user id provided", status: 400 });
     const user_id = req.headers["user-id"];
@@ -997,7 +995,6 @@ router.get("/:id/email-receipt", async (req, res) => {
  * @param {OrderRequest} orderRequest Order request to remove
  */
 async function removeOrderRequestFromTransaction(transaction, orderRequest) {
-  console.log('removing order from transaction', transaction.orderRequests, orderRequest);
   let index = transaction.orderRequests.findIndex(
     (x) => x._id.toString() == orderRequest._id.toString()
   );
@@ -1054,6 +1051,7 @@ router.put(
 module.exports = {
   router: router,
   addItemToTransaction: addItemToTransaction,
+  addLogToTransaction: addLogToTransaction,
   removeItemFromTransaction: removeItemFromTransaction,
   addOrderRequestToTransaction: addOrderRequestToTransaction,
   removeOrderRequestFromTransaction: removeOrderRequestFromTransaction,

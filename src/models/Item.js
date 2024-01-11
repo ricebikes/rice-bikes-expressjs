@@ -11,6 +11,7 @@ var ItemSchema = new mongoose.Schema({
     category_1: { type: String, required: true }, // can't be null
     category_2: String,
     category_3: String,
+    disabled: Boolean,
     brand: { type: String, required: true }, // can't be null
     specifications: { type: Map, of: String }, //dict,
     features: [String], // array of strings
