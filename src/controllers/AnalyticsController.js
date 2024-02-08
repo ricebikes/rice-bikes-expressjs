@@ -34,12 +34,16 @@ router.get('/transactions/bike_count', async (req, res) => {
         const inpatientIncompleteCount = transactions.filter(tx => {
             if (tx.complete) return false
             if (tx.transaction_type == 'retrospec' && tx.status != 'building') return false
+            // Added this so that beer bikes don't contribute to active counts
+            if (tx.transaction_type == 'beer bike') return false
             return true
         }).length;
 
         const inpatientCompleteCount = transactions.filter(tx => {
             if (!tx.complete) return false
             if (tx.transaction_type == 'retrospec' && !tx.reserved) return false
+            // Added this so that beer bikes don't contribute to active counts
+            if (tx.transaction_type == 'beer bike') return false
             return true
         }).length
 
