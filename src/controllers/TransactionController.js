@@ -674,6 +674,7 @@ router.put("/:id", async (req, res) => {
     transaction.waiting_email = req.body.waiting_email;
     transaction.urgent = req.body.urgent;
     transaction.refurb = req.body.refurb;
+    transaction.nuclear = req.body.nuclear;
     transaction.transaction_type = req.body.transaction_type;
     const savedTransaction = await transaction.save();
     return res.status(200).json(savedTransaction);
