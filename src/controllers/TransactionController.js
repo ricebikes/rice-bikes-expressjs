@@ -114,7 +114,7 @@ router.get("/", async (req, res) => {
       complete: 0,
       is_paid: 0,
       refurb: 0,
-      paymentType: 0,
+      paymentType: 0
     });
 
     // Sort transactions here
@@ -127,21 +127,7 @@ router.get("/", async (req, res) => {
           new Date(b.date_created).getTime()
         );
       });
-      //Sort Beer Bikes by newest to oldest (this tab has completes and incompletes)
-    } else if (query.beerbike){
-        transactions = transactions.sort((b, a) => {
-          if((a.urgent && b.urgent) || (!a.urgent && !b.urgent)) {
-            return (
-              new Date(b.date_created).getTime() - 
-              new Date(a.date_created).getTime()
-            );
-          } else if (a.urgent) {
-            return 1;
-          } else if (b.urgent) {
-            return -1;
-          }
-        });
-        // Active, Retrospec, Waiting on email, Refurbs
+      // Active, Retrospec, Waiting on email, Refurbs
     } else if (!query.complete) {
       transactions = transactions.sort((b, a) => {
         if ((a.urgent && b.urgent) || (!a.urgent && !b.urgent)) {
