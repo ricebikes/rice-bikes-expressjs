@@ -23,9 +23,9 @@ var ItemSchema = new mongoose.Schema({
     last_updated: Date,
 });
 
-ItemSchema.index({ name: "text"});
-ItemSchema.index({ upc: 1 }, {unique: true});
-ItemSchema.index({ category_1: 1, category_2: 1, category_3: 1}, {unique: true});
+//ItemSchema.index({ name: "text"});
+ItemSchema.index({name: "text"}, { upc: 1 }, {unique: true}, { category_1: 1, category_2: 1, category_3: 1}, {unique: true});
+//ItemSchema.index({ category_1: 1, category_2: 1, category_3: 1}, {unique: true});
 
 mongoose.model('Item', ItemSchema);
 
