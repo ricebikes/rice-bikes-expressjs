@@ -1,25 +1,24 @@
 var mongoose = require('mongoose');
 
 var ItemSchema = new mongoose.Schema({
-    name: { type: String, required: true, index: true}, // can't be null (or can it)
-    upc: { type: String, unique: true, index: true, validate: { 
+    name: { type: String, required: true}, // can't be null (or can it)
+    upc: { type: String, unique: true, validate: { 
         validator: function(v) {
             return /[0-9]/.test(v);
         },
         message: '{VALUE} is not a number'
     }}, // numeric 0-9
-    category_1: { type: String, required: true, index: true }, // can't be null
+    category_1: { type: String, required: true }, // can't be null
     category_2: String,
     category_3: String,
     disabled: Boolean,
-    brand: { type: String, required: true }, // can't be null
-    specifications: { type: Map, of: String }, //dict,
+    brand: { type: String, required: true , index: true}, // can't be null
+    specifications: { type: Map, of: String, index: true }, //dict,
     features: [String], // array of strings
     standard_price: Number,
     wholesale_cost: Number,
     in_stock: Number,
     threshold_stock: Number,
-
     last_updated: Date,
 });
 
