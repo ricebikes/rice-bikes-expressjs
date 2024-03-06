@@ -281,7 +281,8 @@ async function calculateTax(transaction) {
       const tax_item = await Item.findOne({ name: config.tax.DBname });
       let calculated_tax = {
         item: tax_item,
-        price: truncate2((transaction.total_cost - discount) * config.tax.rate),
+        // Was transaction.total_cost - discount. Removed discount so that discount is factored into tax.
+        price: truncate2((transaction.total_cost) * config.tax.rate),
       };
       // round off the tax value
       if (calculated_tax.price > Number.EPSILON) {
