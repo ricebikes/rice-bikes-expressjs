@@ -629,6 +629,11 @@ router.put("/:id/customer", async (req, res) => {
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404).json();
 
+    // if(req.body.clearCustomer) {
+    //   transaction.customer = null;
+    //   return res.status(200).json(transaction);
+    // }
+
     if (!req.body.customer) {
       res.status(400).json({ err: "No customer specified", status: 400 });
     }
